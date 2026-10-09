@@ -30,16 +30,21 @@ data, runs the code, checks the result and votes. The system matters more than t
 | **Our agent, local, dev, Coder** (before the fit rules) | 61.1 | 75.4 | 58.8 | 40.0 |
 | Our agent, local, dev, Qwen3-1.7B | 55.0 | 81.5 | 48.8 | 20.0 |
 | **Our agent, local, dev, Coder + fit rules** | 65.6 | 72.3 | 46.2 | 97.1 |
-| **Our agent, platform (private set), version before the fit rules** | **51.7** | 75.6 | 40.0 | 32.0 |
+| **Our agent, local, dev, current version** | 69.4 | 72.3 | 55.0 | 97.1 |
+| Our agent, platform (private set), first version (before the fit rules) | 51.7 | 75.6 | 40.0 | 32.0 |
+| **Our agent, platform (private set), current version ("stage 3")** | **74.2** | 77.8 | 60.0 | 96.0 |
 
 Reading the table, and caveats:
-- The local dev score does not transfer: **tables lose about 19 points** between dev (58.8) and the private set (40.0),
-  which matches the statement that the private set has table types dev does not. The no-files family transfers without
-  loss.
-- The last local run (65.6) had slow generation (Colab T4), so the voting round was skipped: its table score is an
-  underestimate. The changes made afterwards (section 6) are **not yet measured**.
-- The fit rules were written and validated on the dev objectives (see limits).
-- Noise: about ±4.5 points on 120 tasks, about ±6 points per 16-task type (one task = 6 points).
+- The first platform submission lost about 19 points on tables compared with dev (58.8 → 40.0). The current version
+  scores **60.0 on tables on the private set** (55.0 locally on dev), so a large part of that loss came from generated
+  programs that crashed without recovery (missing dictionary, wrong column names, truncated code), not only from table
+  types absent from dev. This is our reading of the numbers, not a proven attribution.
+- **Fits transfer**: 96.0 % on the private set (24/25) against 97.1 % on dev, which confirms that the private fit
+  objectives follow the same templates as dev.
+- The no-files family transfers without loss (75.6 → 77.8 on the platform, 72.3 locally).
+- Between the first and the current platform submission, the gain is +10 tasks on tables and +16 on fits (no-files: +1).
+- Noise: about ±4 points on 120 tasks, about ±6 points per 16-task type (one task = 6 points). A task weighs 0.8 point
+  on the leaderboard.
 
 ## 3. Architecture
 
@@ -136,11 +141,11 @@ Quota: 5 deployments per person per rolling 24 h, failed ones included.
 
 ## 7. Limits and risks (to state at the oral)
 
-- **Table generalisation**: 40 % on the private set. New table types remain the weak point; `dev_ext.json` approximates
-  them but is not a measurement.
-- **The fit rules exploit the regularity of the objectives** (five scenarios, fixed phrasings). 34/35 on dev, but that
-  is a validation on the very objectives used to write them. If the private set words things differently, they fall
-  back to the LLM (no loss) or, more rarely, answer wrongly with confidence (not observed on dev).
+- **Table generalisation**: 60 % on the private set (20 tasks missed out of 50), the largest remaining loss. New table
+  types remain the main risk; `dev_ext.json` approximates them but is not a measurement.
+- **The fit rules exploit the regularity of the objectives** (five scenarios, fixed phrasings). 34/35 on dev and 24/25
+  on the private set. They were written from the dev objectives, so they say little about differently worded fits; when
+  unsure they fall back to the LLM.
 - **Time dependence**: quality depends on available time (voting, repair). Local measurements were made on a T4; the
   platform uses an RTX 4090 (faster).
 - **Not verified here**: memory (3 GiB), upload scan rules (`exec` and `ctypes` are present in `agent.py`).
@@ -150,7 +155,8 @@ Quota: 5 deployments per person per rolling 24 h, failed ones included.
 
 ## 8. Next steps
 
-1. Measure the effect of the latest fixes (`SmartFrame`, dictionary, continuation, opportunistic voting) on dev and `dev_ext.json`.
+1. Remaining misses on the private set: 20 table tasks and 10 no-files tasks (fits are nearly saturated). Measure Qwen3-1.7B and
+   adaptive voting on these two families only.
 2. Adaptive voting: more samples for tasks where answers disagree.
 3. An example library (2 or 3 picked by keywords in the objective) instead of one example per family.
 4. Retry Qwen3-1.7B with a prompt tuned for it (it beats the Coder in the task reference, not in our agent).
