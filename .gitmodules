@@ -1,0 +1,3 @@
+[submodule "ds-harness"]
+    path = ds-harness
+    url = https://github.com/racousin/ds-harness
