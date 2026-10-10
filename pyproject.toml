@@ -1,23 +1,28 @@
 [project]
 name = "ml-project-ds-harness"
 version = "0.1.0"
-description = "Add your description here"
+description = "Agent de traitement et d'évaluation de tâches de machine learning."
 readme = "README.md"
 authors = [
     { name = "Dave78300", email = "dvdsahna@gmail.com" }
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "jupyter>=1.1.1",
-    "matplotlib>=3.11.2",
     "numpy>=2.5.3",
     "pandas>=3.0.6",
     "scikit-learn>=1.9.1",
-    "seaborn>=0.13.2",
+    "scipy",
+    "sympy",
+    "torch",
 ]
 
-[project.scripts]
-ml-project-ds-harness = "ml_project_ds_harness:main"
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.11.2",
+    "seaborn>=0.13.2",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.13,<0.13.0"]
