@@ -2,167 +2,162 @@
 
 **Team:** _to be filled in_ · **Freeze:** 2026-11-03 23:59 · **Oral:** 2026-11-04
 
-## 1. The problem
+## 1. Challenge and grading
 
-Each task is an English objective, sometimes with CSV files (and a `data_dictionary.csv`), whose answer is **a single
-number**. Three families (120 private tasks):
+Each task gives an English objective, sometimes with CSV files and a data dictionary. The required answer is one
+number. The private evaluation contains 120 tasks:
 
-| Family | Content | Tasks |
-|---|---|---|
-| No files | arithmetic, percentages, growth, dates, probability, word problems | 45 |
-| Tables | a statistic, a filter, a group ranking, a join, a derived column (1 or 2 CSV files) | 50 |
-| Fits | linear or logistic regression on `train.csv` (prediction, coefficient, R², count) | 25 |
+| Family | Content | Tasks | Share of private tasks |
+|---|---|---:|---:|
+| No files | Arithmetic, percentages, growth, dates, probability, word problems | 45 | 37.5% |
+| Tables | Statistics, filters, group rankings, joins, derived columns | 50 | 41.7% |
+| Fits | Linear or logistic regression on `train.csv` | 25 | 20.8% |
 
-Constraints: a ~1.5B-parameter model (5 models mounted), **40 s per call of 8 tasks**, 15 calls, 3 CPUs, 3 GiB of RAM,
-no network. A call that raises or runs out of time fails the whole deployment. Score = % of tasks within tolerance
-(`1.5 × 10⁻ⁿ` for n decimals).
+The score is the percentage of tasks answered within tolerance (`1.5 × 10⁻ⁿ` for n requested decimals). The project
+grade is split between the leaderboard (25%) and the oral for both members (75%). The leaderboard mark is the best
+chosen submission's private-set score at the freeze. On a linear conversion, a 90.8% score contributes 4.54 of the
+leaderboard component's 5 points on the final /20 grade.
 
-**Guiding idea:** the model computes nothing itself. It writes Python code, and the system reads the files, cleans the
-data, runs the code, checks the result and votes. The system matters more than the model.
+Runtime constraints: a model of about 1.5B parameters, 40 seconds per call of 8 tasks, 15 calls, 3 CPUs, 3 GiB RAM,
+and no network. A call that raises or exceeds its time limit fails the deployment.
 
-## 2. Results (measured)
+## 2. Results
 
-| Evaluation | Score | No files | Tables | Fits |
-|---|---|---|---|---|
-| Task reference, Qwen2.5-1.5B (dev) | 46.1 | 86.2 | 28.8 | 11.4 |
-| Task reference, Qwen2.5-Coder-1.5B (dev) | 53.3 | 81.5 | 47.5 | 14.3 |
-| Task reference, Qwen3-1.7B (dev) | 62.2 | 80.0 | 62.5 | 28.6 |
-| **Our agent, local, dev, Coder** (before the fit rules) | 61.1 | 75.4 | 58.8 | 40.0 |
-| Our agent, local, dev, Qwen3-1.7B | 55.0 | 81.5 | 48.8 | 20.0 |
-| **Our agent, local, dev, Coder + fit rules** | 65.6 | 72.3 | 46.2 | 97.1 |
-| **Our agent, local, dev, current version** | 69.4 | 72.3 | 55.0 | 97.1 |
-| Our agent, platform (private set), first version (before the fit rules) | 51.7 | 75.6 | 40.0 | 32.0 |
-| **Our agent, platform (private set), current version ("stage 3")** | **74.2** | 77.8 | 60.0 | 96.0 |
+| Evaluation | Score | No files | Tables | Fits | Notes |
+|---|---:|---:|---:|---:|---|
+| Task reference, Qwen2.5-1.5B (dev) | 46.1 | 86.2 | 28.8 | 11.4 | |
+| Task reference, Qwen2.5-Coder-1.5B (dev) | 53.3 | 81.5 | 47.5 | 14.3 | |
+| Task reference, Qwen3-1.7B (dev) | 62.2 | 80.0 | 62.5 | 28.6 | |
+| Agent, local dev, initial version | 61.1 | 75.4 | 58.8 | 40.0 | Before fit rules |
+| Agent, local dev, Qwen3-1.7B | 55.0 | 81.5 | 48.8 | 20.0 | |
+| Agent, local dev, Coder + fit rules | 65.6 | 72.3 | 46.2 | 97.1 | |
+| Agent, local dev, earlier current version | 69.4 | 72.3 | 55.0 | 97.1 | |
+| Agent, platform, first version | 51.7 | 75.6 | 40.0 | 32.0 | Before fit rules |
+| Agent, platform, earlier stage 3 | 74.2 | 77.8 | 60.0 | 96.0 | From the previous README |
+| Agent, platform, penultimate submission | 89.2 | 91.1 | 84.0 | 96.0 | 107/120 tasks |
+| **Agent, best platform result reported** | **90.8** | **95.6** | **84.0** | **96.0** | **109/120 tasks** |
+| Agent, full local dev run | 97.2 | 92.3 | 100.0 | 100.0 | 180 tasks; 0 format errors |
 
-Reading the table, and caveats:
-- The first platform submission lost about 19 points on tables compared with dev (58.8 → 40.0). The current version
-  scores **60.0 on tables on the private set** (55.0 locally on dev), so a large part of that loss came from generated
-  programs that crashed without recovery (missing dictionary, wrong column names, truncated code), not only from table
-  types absent from dev. This is our reading of the numbers, not a proven attribution.
-- **Fits transfer**: 96.0 % on the private set (24/25) against 97.1 % on dev, which confirms that the private fit
-  objectives follow the same templates as dev.
-- The no-files family transfers without loss (75.6 → 77.8 on the platform, 72.3 locally).
-- Between the first and the current platform submission, the gain is +10 tasks on tables and +16 on fits (no-files: +1).
-- Noise: about ±4 points on 120 tasks, about ±6 points per 16-task type (one task = 6 points). A task weighs 0.8 point
-  on the leaderboard.
+The latest private-set category scores correspond to 43/45 no-file tasks, 42/50 table tasks, and 24/25 fit tasks. The
+increase from 89.2% to 90.8% is two additional tasks, reflected in the no-files score moving from 91.1% to 95.6%;
+tables and fits remained at 84% and 96%. These are aggregate results only; private objectives and files are not logged.
 
-## 3. Architecture
+One task is about 0.83 percentage points of the total score. The remaining errors are concentrated in tables (8 of
+50 tasks at 84%), followed by no-files (2 of 45) and fits (1 of 25). The local 97.2% result is useful evidence on the
+public dev set, but it does not predict private-set performance by itself.
 
-```
+## 3. Recent changes and checks
+
+- Deterministic no-file rules now cover summing explicitly listed amounts, periodic departures using an LCM,
+  Bayesian positive-test questions, and whole-year compound-interest thresholds.
+- Table rules cover whole-table statistics, common filters, group aggregates and counts, joins, and derived ratios.
+  Recent group-query handling recognizes additional phrasings such as “per”, “by”, “within each”, and group counts.
+- Six targeted synthetic group-aggregation variants passed.
+- A deterministic replay of the public 180-task dev produced 129 direct rule answers, with no incorrect direct
+  outputs; 51 tasks were delegated to the LLM. This replay is not a full end-to-end model run.
+- The last full end-to-end local run reported 97.2% on dev. It preceded the latest group-phrase extension.
+
+Synthetic cases are a separate test set; they do not change the public dev data or train the model. A synthetic pass
+shows that a specific code path behaves as expected, not that the same phrasing or failure occurs in the private set.
+
+## 4. Architecture
+
+```text
 task ──► route ──► read files ──► hints ──► generate ──► execute ──► vote ──► rounded number
          │         (cleaning)     (prompt)    (LLM)       (sandbox)
-         └─ fits: rule-based solver ──► number   (falls back to the LLM when it is not sure)
+         └─ no-file and table rules; fit solver falls back to the LLM when uncertain
 ```
 
-1. **Router** (`route`): no file → `nofile`; `train.csv` present → `fit`; otherwise → `table`.
-2. **Robust reading** (`read_table`, `load_task`): separator detection, decimal commas, missing-value tokens (a fixed
-   list plus tokens quoted in the objective), glued units (`12 kg`), class codes (`5A`, `5B`) kept as text, day-first
-   dates (keyword in the objective, otherwise values above 12 decide), duplicates dropped when the objective mentions them.
-3. **Joins** (`align_keys`): finds the key column shared by two tables (value inclusion, up to case, prefix and leading
-   zeros) and normalises it; the model is told "Join key: …".
-4. **Named entities** (`entity_hints`): a name quoted in the objective ("Grenoble lab") is linked to its dictionary code
-   (`S02`).
-5. **Fits** (`fit_rules`): target = the `train.csv` column missing from `test.csv`; features chosen by word overlap with
-   the dictionary; year filter; **unregularised** linear or logistic regression (as the objective asks); the question
-   is read with regular expressions. **When in doubt the solver returns nothing** and the LLM takes over.
-6. **Prompt**: short system instruction, one worked example per family (invented, not copied from dev), table schema,
-   dictionary, hints, objective.
-7. **Generation** (`Agent.generate`): Qwen2.5-Coder-1.5B through `dsh.load_llm` (weights from the platform cache, no
-   download). One greedy pass, then a sampling round (temperature 0.5, `DSH_SAMPLES` per task) as long as time remains.
-   Every `generate` call is bounded by `max_time`.
-8. **Execution** (`run_code`): the program runs in a watched thread (1.5 s limit, stops infinite loops). Namespace:
-   pandas, numpy, scipy.stats, sympy, sklearn. In addition:
-   - `pd.read_csv('name.csv')` returns the **already cleaned** table (including `data_dictionary.csv`);
-   - `SmartFrame` recovers a wrongly named column (case, dictionary description, near-equality);
-   - `LinearRegression` / `LogisticRegression` tolerate NaN; the logistic one is unregularised when the objective says so.
-9. **Repair and continuation**: a program that crashes is sent back to the model with its error and the real columns;
-   a program cut off by the token limit is continued (`run_continue`).
-10. **Vote** (`vote`): majority value (the greedy pass weighs 1.5, each sample 1), rounded as the objective asks.
-11. **Safety net**: every error is caught per task, `solve` always returns a number, internal budget of 29 s out of 40 s.
+1. **Router:** no files → `nofile`; `train.csv` present → `fit`; otherwise → `table`.
+2. **Robust reading:** separator detection, decimal commas, missing-value tokens (fixed list plus tokens quoted in the
+   objective), glued units (`12 kg`), class codes (`5A`, `5B`) kept as text, day-first dates, and requested deduplication.
+3. **Joins:** finds shared key columns and normalizes case, prefixes, and leading zeros; the detected join key is passed
+   to the model as a hint.
+4. **Named entities:** links quoted names in the objective (for example, “Grenoble lab”) to dictionary codes.
+5. **Rules:** deterministic handlers solve supported no-file, table, and fit templates. Uncertain fit tasks fall back
+   to generated code.
+6. **Prompt and generation:** Qwen2.5-Coder-1.5B writes Python; the system gives it a short instruction, a worked
+   example, table schema, dictionary, hints, and objective. It runs a greedy pass, then samples while time remains.
+7. **Execution and recovery:** generated code runs with pandas, NumPy, SciPy, SymPy, and scikit-learn. `pd.read_csv`
+   returns cleaned tables; `SmartFrame` recovers common column-name mismatches; failed code can be repaired and
+   truncated code continued.
+8. **Vote and safety:** the greedy result has weight 1.5, each sample weight 1. Errors are caught per task, and the
+   internal time budget is 29 seconds out of 40.
 
-## 4. Files
+## 5. Files and local usage
 
 | File | Role |
 |---|---|
-| `agent.py` | the agent (`Agent` class, `solve`); imports `dsh` |
-| `dsh.py` | the challenge starter kit (model loading, tools), to be uploaded **together with** `agent.py` |
-| `dev_ext.json` | 30 table tasks of a kind absent from dev (standard deviation, correlation, second-largest value…), gold values computed with pandas |
-| `README.md` | this document |
+| `agent.py` | Agent class and `solve` entry point |
+| `dsh.py` | Challenge starter kit, submitted alongside `agent.py` |
+| `outputs/stage3.py` | Current working candidate with the latest deterministic-rule changes; the latest small group-phrase extension has not yet had a full end-to-end run |
+| `dev.json` | Public development tasks |
+| `dev_ext.json` | 30 extra table tasks (standard deviation, correlation, second-largest value, and others) |
+| `README.md` | This report |
 
-## 5. Usage
-
-### Local tests (in the `ds-harness` repository, next to `localtest.py`, `scoring.py`, `dev.json`)
+Run from the repository containing `localtest.py`, `scoring.py`, and `dev.json`:
 
 ```bash
-python localtest.py agent.py --test-run -v          # the 16 tasks of the platform's test run
-python localtest.py agent.py --out run.json         # the 180 dev tasks, at the real 40 s limit
-python localtest.py agent.py --tasks dev_ext.json   # new table types
-python localtest.py agent.py --type table.join -v   # a single task type
+python localtest.py agent.py --test-run -v
+python localtest.py agent.py --out run.json
+python localtest.py agent.py --tasks dev_ext.json
+python localtest.py agent.py --type table.join -v
 ```
 
-### Environment variables (local only, absent on the platform)
+Environment variables for local experiments only:
 
 | Variable | Effect |
 |---|---|
-| `DSH_DEBUG=1` | prints generated code, errors and the schema the model sees (**never on the platform**: task content) |
-| `DSH_BUDGET=100` | internal time budget (default 29 s), for slow GPUs |
-| `DSH_SAMPLES=8` | samples per task (default 4) |
-| `DSH_MODEL=Qwen/Qwen3-1.7B` | another model from `ALLOWED_MODELS` (default: the Coder) |
-| `DSH_NO_REPAIR=1`, `DSH_OLD_PROMPT=1` | ablation switches |
+| `DSH_DEBUG=1` | Prints generated code, errors, and the schema seen by the model; never enable on the platform |
+| `DSH_BUDGET=100` | Internal time budget (default 29 seconds) |
+| `DSH_SAMPLES=8` | Samples per task (default 4) |
+| `DSH_MODEL=Qwen/Qwen3-1.7B` | Selects another model from `ALLOWED_MODELS` |
+| `DSH_NO_REPAIR=1`, `DSH_OLD_PROMPT=1` | Ablation switches |
 
-In Colab, a variable set with `os.environ[...]` is inherited by every later `!python` command.
+In Colab, an environment variable set with `os.environ[...]` is inherited by subsequent shell commands.
 
-### Deployment
-
-```python
-import mlarena
-client = mlarena.connect(api_key="mlk_user_...")      # never commit the key
-client.submit(challenge_id=194, files=["agent.py", "dsh.py"],
-              runtime={"language": "python", "framework": "torch"},
-              wait=True, timeout_sec=1800)
-```
-
-Before submitting: create the team, set no `DSH_*` variable, check memory
-(`/usr/bin/time -v python localtest.py agent.py --test-run` → "Maximum resident set size" below 3,000,000 KB).
-Quota: 5 deployments per person per rolling 24 h, failed ones included.
-
-## 6. What we learned (defects found, in order)
+## 6. Defects found and fixes
 
 | Defect | Effect | Fix |
 |---|---|---|
-| Generated code re-ran `import pandas as pd`, overwriting my version of `read_csv` | tables near 0 % | `pd.read_csv` patched temporarily (survives imports) |
-| sklearn raises on NaN | fits failing | NaN-tolerant regressions |
-| Join keys written differently in the two files | `table.join` at **0 %** | `align_keys` → **87.5 %** |
-| `LogisticRegression()` regularised by default (C=1) while the objective says "without regularisation" | probabilities outside tolerance | unregularised, solver forced |
-| Wrong use of `dsh.load_llm` (it returns an `LLM` object, not a tuple) | double loading, attempted download | use `llm.model` / `llm.tok` |
-| Unbounded `generate()`, heavy imports on the first call, signal-based timeout | `deadline exceeded` | `max_time`, preloaded imports, watched thread |
-| Sampling round skipped when generation is slow | zeros (no valid program) | opportunistic round bounded by `max_time` |
-| Recurring generated-code errors: `read_csv('data_dictionary.csv')`, wrong column names, program cut at 300 tokens | ~33 tasks at `0.0` out of 62 failures | dictionary served by `read_csv`, `SmartFrame`, `run_continue` (**not measured**) |
+| Generated code re-imported pandas and replaced the patched `read_csv` | Table tasks failed | Patch `pd.read_csv` temporarily so the wrapper survives imports |
+| Scikit-learn rejected NaNs | Fit tasks failed | NaN-tolerant linear and logistic regression |
+| Join keys differed between files | `table.join` initially scored 0% | Normalize case, prefixes, and leading zeros |
+| Logistic regression used regularization by default | Predictions missed tolerance | Use unregularized fitting when requested |
+| Incorrect `dsh.load_llm` handling | Duplicate model load and attempted download | Use `llm.model` and `llm.tok` |
+| Unbounded generation and signal-based timeout | Deadline failures | Bound `generate()` with `max_time`; preload imports and use a watched thread |
+| Sampling skipped when generation was slow | No valid program for some tasks | Opportunistic sampling bounded by remaining time |
+| Wrong columns, missing dictionary reads, and truncated code | Many generated programs failed | Serve the dictionary via `read_csv`, add `SmartFrame`, and continue truncated code |
+| Several recurring no-file formula patterns | A few local calculation errors | Add deterministic formula handlers and check them with synthetic variants |
 
-## 7. Limits and risks (to state at the oral)
+## 7. Limits, risks, and next steps
 
-- **Table generalisation**: 60 % on the private set (20 tasks missed out of 50), the largest remaining loss. New table
-  types remain the main risk; `dev_ext.json` approximates them but is not a measurement.
-- **The fit rules exploit the regularity of the objectives** (five scenarios, fixed phrasings). 34/35 on dev and 24/25
-  on the private set. They were written from the dev objectives, so they say little about differently worded fits; when
-  unsure they fall back to the LLM.
-- **Time dependence**: quality depends on available time (voting, repair). Local measurements were made on a T4; the
-  platform uses an RTX 4090 (faster).
-- **Not verified here**: memory (3 GiB), upload scan rules (`exec` and `ctypes` are present in `agent.py`).
-- **Overfitting**: several fixes come from failures observed on dev. Keep `dev_ext.json` and an unseen half of dev as
-  guardrails.
-- **Noise**: one task weighs 0.8 points out of 120; do not read a change of 1 to 3 tasks as an effect.
+- **Tables are the largest current weakness:** 84% on the latest reported private result. Improve broad handling of
+  statistics, filtered aggregates, grouping, and joins; keep unseen synthetic variants as a holdout.
+- **No-file rules are pattern-based:** the private score rose from 91.1% to 95.6%, but there are still two missed
+  tasks and no private task-level diagnostics to identify them.
+- **Fits are near saturation:** 96% privately and 100% in the last full local dev run. The rules rely on regular
+  objective templates; differently worded fits remain a risk.
+- **Synthetic coverage is not a private score estimate:** vary both data and language, and keep separate examples
+  that are not used when writing rules.
+- **Runtime and packaging:** quality depends on time available for repair and voting. Check the 3 GiB memory limit,
+  the upload scanner, and the exact entry-point filenames before deployment.
+- **Noise:** one private task changes the total by about 0.83 points. Compare versions on the same fixed evaluation
+  and avoid interpreting one small score movement as proof of a general improvement.
 
-## 8. Next steps
+## 8. Deployment
 
-1. Remaining misses on the private set: 20 table tasks and 10 no-files tasks (fits are nearly saturated). Measure Qwen3-1.7B and
-   adaptive voting on these two families only.
-2. Adaptive voting: more samples for tasks where answers disagree.
-3. An example library (2 or 3 picked by keywords in the objective) instead of one example per family.
-4. Retry Qwen3-1.7B with a prompt tuned for it (it beats the Coder in the task reference, not in our agent).
-5. Compare two versions task by task (right/wrong flips) to separate noise from real effect.
+Before submission, create the team, unset all `DSH_*` variables, and check memory:
+
+```bash
+/usr/bin/time -v python localtest.py agent.py --test-run
+```
+
+The reported maximum resident set size must stay below 3,000,000 KB. Submit both `agent.py` and `dsh.py` using the
+challenge's required runtime. The quota is five deployments per person per rolling 24 hours, including failed ones.
+The best chosen submission at the freeze determines the leaderboard mark.
 
 ## 9. Privacy
 
-The challenge rules forbid logging the objectives or files of platform runs. In production the agent prints only
-durations (`[solve] prep … | … | total …`, labels in French) and the loaded model (`[init] …`).
+The challenge rules forbid logging objectives or files from platform runs. In production, print only durations and
+model-loading status; do not save private task content or attempt to recover hidden task-level errors.
