@@ -23,6 +23,8 @@ and no network. A call that raises or exceeds its time limit fails the deploymen
 
 ## 2. Results
 
+### Public development set (local)
+
 | Evaluation | Score | No files | Tables | Fits | Notes |
 |---|---:|---:|---:|---:|---|
 | Task reference, Qwen2.5-1.5B (dev) | 46.1 | 86.2 | 28.8 | 11.4 | |
@@ -32,19 +34,26 @@ and no network. A call that raises or exceeds its time limit fails the deploymen
 | Agent, local dev, Qwen3-1.7B | 55.0 | 81.5 | 48.8 | 20.0 | |
 | Agent, local dev, Coder + fit rules | 65.6 | 72.3 | 46.2 | 97.1 | |
 | Agent, local dev, earlier current version | 69.4 | 72.3 | 55.0 | 97.1 | |
+| Agent, full local dev run | 97.2 | 92.3 | 100.0 | 100.0 | 180 tasks; 0 format errors |
+| **Agent, latest local result** | **100.0** | **100.0** | **100.0** | **100.0** | **Same candidate as the 90.8% private leaderboard result; task count not reported** |
+
+The earlier full end-to-end local run covered 180 tasks with 0 format errors. The later 100.0% result was achieved by the candidate that scored 90.8% on the private leaderboard; the local task count was not reported.
+
+### Private leaderboard evaluation
+
+| Evaluation | Score | No files | Tables | Fits | Notes |
+|---|---:|---:|---:|---:|---|
 | Agent, platform, first version | 51.7 | 75.6 | 40.0 | 32.0 | Before fit rules |
 | Agent, platform, earlier stage 3 | 74.2 | 77.8 | 60.0 | 96.0 | From the previous README |
 | Agent, platform, penultimate submission | 89.2 | 91.1 | 84.0 | 96.0 | 107/120 tasks |
 | **Agent, best platform result reported** | **90.8** | **95.6** | **84.0** | **96.0** | **109/120 tasks** |
-| Agent, full local dev run | 97.2 | 92.3 | 100.0 | 100.0 | 180 tasks; 0 format errors |
 
 The latest private-set category scores correspond to 43/45 no-file tasks, 42/50 table tasks, and 24/25 fit tasks. The
 increase from 89.2% to 90.8% is two additional tasks, reflected in the no-files score moving from 91.1% to 95.6%;
 tables and fits remained at 84% and 96%. These are aggregate results only; private objectives and files are not logged.
 
-One task is about 0.83 percentage points of the total score. The remaining errors are concentrated in tables (8 of
-50 tasks at 84%), followed by no-files (2 of 45) and fits (1 of 25). The local 97.2% result is useful evidence on the
-public dev set, but it does not predict private-set performance by itself.
+One task is about 0.83 percentage points of the total score. At 90.8%, the remaining errors are concentrated in
+tables (8 of 50 tasks), followed by no-files (2 of 45) and fits (1 of 25).
 
 ## 3. Recent changes and checks
 
@@ -55,7 +64,7 @@ public dev set, but it does not predict private-set performance by itself.
 - Six targeted synthetic group-aggregation variants passed.
 - A deterministic replay of the public 180-task dev produced 129 direct rule answers, with no incorrect direct
   outputs; 51 tasks were delegated to the LLM. This replay is not a full end-to-end model run.
-- The last full end-to-end local run reported 97.2% on dev. It preceded the latest group-phrase extension.
+- An earlier full end-to-end local dev run scored 97.2% over 180 tasks, with 0 format errors. A later local run scored 100.0% overall and in each family with the candidate that reached 90.8% on the platform leaderboard; its task count was not reported.
 
 Synthetic cases are a separate test set; they do not change the public dev data or train the model. A synthetic pass
 shows that a specific code path behaves as expected, not that the same phrasing or failure occurs in the private set.
@@ -88,20 +97,26 @@ task ──► route ──► read files ──► hints ──► generate ─
 
 | File | Role |
 |---|---|
-| `agent.py` | Agent class and `solve` entry point |
-| `dsh.py` | Challenge starter kit, submitted alongside `agent.py` |
-| `outputs/stage3.py` | Current working candidate with the latest deterministic-rule changes; the latest small group-phrase extension has not yet had a full end-to-end run |
-| `dev.json` | Public development tasks |
-| `dev_ext.json` | 30 extra table tasks (standard deviation, correlation, second-largest value, and others) |
+| `outputs/stage3.py` | Current candidate; contains the `Agent` entry point and latest deterministic-rule changes; package as `agent.py` for submission |
+| `dsh.py` | Challenge kit imported by the candidate and submitted with the packaged agent |
+| `localtest.py` | Runs the candidate through the local challenge evaluator |
+| `scoring.py` | Reference delivery and scoring code; keep unchanged |
+| `env.py`, `schema.md` | Platform environment and agent input/output contract |
+| `requirements.txt` | Python dependencies for the kit and evaluator |
+| `hf_models.json` | IDs of the models mounted by the platform; weights are not included |
+| `test_dsh.py` | Tests for the starter kit |
+| `UPSTREAM.md` | Source and pinned upstream revision for mirrored files |
+| `dev.json` | Download locally for evaluation; excluded from Git |
 | `README.md` | This report |
 
-Run from the repository containing `localtest.py`, `scoring.py`, and `dev.json`:
+Install the listed dependencies, obtain the challenge's public `dev.json` locally, then run from this repository:
 
 ```bash
-python localtest.py agent.py --test-run -v
-python localtest.py agent.py --out run.json
-python localtest.py agent.py --tasks dev_ext.json
-python localtest.py agent.py --type table.join -v
+python -m pip install -r requirements.txt
+python -m pytest -q test_dsh.py
+python localtest.py outputs/stage3.py --test-run -v
+python localtest.py outputs/stage3.py --out run.json
+python localtest.py outputs/stage3.py --type table.join -v
 ```
 
 Environment variables for local experiments only:
@@ -161,3 +176,5 @@ The best chosen submission at the freeze determines the leaderboard mark.
 
 The challenge rules forbid logging objectives or files from platform runs. In production, print only durations and
 model-loading status; do not save private task content or attempt to recover hidden task-level errors.
+
+
