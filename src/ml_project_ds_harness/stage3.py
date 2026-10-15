@@ -21,6 +21,7 @@ import re
 import signal
 import threading
 import time
+import unicodedata
 
 import numpy as np
 import pandas as pd
@@ -58,6 +59,121 @@ def _num_from_text(x):
         return sign * abs(float(t))
     except ValueError:
         return np.nan
+
+
+def clean_numeric(values):
+    """Coerce mixed numeric strings, decimal commas, and simple units; unparseable entries become NaN."""
+    def parse(value):
+        if pd.isna(value):
+            return np.nan
+        if isinstance(value, (int, float, np.number)):
+            number = float(value)
+            return number if math.isfinite(number) else np.nan
+        return _num_from_text(str(value))
+    if isinstance(values, pd.Series):
+        return values.map(parse).astype(float)
+    if np.isscalar(values):
+        return parse(values)
+    return pd.Series(values).map(parse).astype(float)
+
+
+def clean_dates(values, dayfirst=False):
+    """Parse mixed date strings while refusing to interpret arbitrary numbers as epoch timestamps."""
+    def parse(value):
+        if pd.isna(value):
+            return pd.NaT
+        if isinstance(value, (datetime.datetime, datetime.date, pd.Timestamp, np.datetime64)):
+            return pd.to_datetime(value, errors="coerce")
+        text = str(value).strip()
+        compact = re.fullmatch(r"(\d{8})(?:\.0+)?", text)
+        if compact:
+            return pd.to_datetime(compact.group(1), format="%Y%m%d", errors="coerce")
+        if re.fullmatch(r"[-+]?\d+(?:\.\d+)?", text):
+            return pd.NaT
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            return pd.to_datetime(text, dayfirst=dayfirst, errors="coerce")
+    if isinstance(values, pd.Series):
+        return values.map(parse)
+    if np.isscalar(values):
+        return parse(values)
+    return pd.Series(values).map(parse)
+
+
+def _numeric_metric(values, description="", force=False):
+    """Return a finite numeric view for a measure, or None when text looks categorical/date-like.
+
+    Numeric columns keep the existing path. Object columns are only coerced when their values
+    look numeric and either nearly all parse or the data dictionary identifies a measurement.
+    """
+    if pd.api.types.is_numeric_dtype(values):
+        return pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan)
+    nonmissing = values.notna()
+    if not nonmissing.any():
+        return pd.Series(np.nan, index=values.index, dtype=float)
+    desc = str(description).lower()
+    measure_hint = bool(re.search(
+        r"\b(amount|price|cost|income|sales|revenue|quantity|rate|ratio|percent(?:age)?|"
+        r"age|height|weight|temperature|surface|area|distance|duration|count|number of|"
+        r"days?|hours?|occupancy|population|volume|energy|score|billed|total|value|"
+        r"mass|length|width|depth|probability|salary|wage|speed|pressure|capacity)\b", desc))
+    categorical_hint = bool(re.search(
+        r"\b(code|coded|identifier|key|reference|category|categorical|status|label)\b", desc))
+    if categorical_hint and not measure_hint:
+        return None
+    if not measure_hint and not force:
+        return None
+
+    raw = values.loc[nonmissing]
+    # Prevent date objects and common textual dates from being read as their first number.
+    if pd.api.types.is_datetime64_any_dtype(values):
+        return None
+    date_objects = raw.map(lambda x: isinstance(x, (datetime.date, datetime.datetime, pd.Timestamp, np.datetime64)))
+    texts = raw.astype(str).str.strip()
+    date_text = texts.map(lambda x: bool(_DATE_RE.fullmatch(x) or re.fullmatch(r"\d{8}(?:\.0+)?", x)))
+    if date_objects.mean() >= 0.5 or date_text.mean() >= 0.5:
+        return None
+
+    numeric_shape = texts.map(lambda x: bool(_NUM_RE.fullmatch(x) or re.fullmatch(r"[$€£]\s*" + _NUM_RE.pattern[1:-1], x)))
+    units = []
+    for text in texts[numeric_shape]:
+        currency = re.match(r"^\s*([$€£])", text)
+        core = text[currency.end():] if currency else text
+        match = re.match(r"^[-+]?\s*\d[\d.,\s]*\s*(.*)$", core)
+        units.append(((currency.group(1) if currency else "") + (match.group(1).strip().casefold() if match else "")))
+    if len(set(units)) > 1:
+        return None
+    parsed = clean_numeric(values)
+    parse_rate = parsed.loc[nonmissing].notna().mean()
+    shape_rate = numeric_shape.mean()
+    threshold = 0.70 if (measure_hint or force) else 0.95
+    if parse_rate < threshold or shape_rate < threshold:
+        return None
+    return parsed.replace([np.inf, -np.inf], np.nan)
+
+
+def safe_divide(numerator, denominator):
+    """Divide while mapping zero denominators and non-finite outputs to NaN."""
+    if isinstance(numerator, pd.Series) or isinstance(denominator, pd.Series):
+        if isinstance(numerator, pd.Series):
+            n = clean_numeric(numerator)
+            if isinstance(denominator, pd.Series):
+                d = clean_numeric(denominator).reindex(n.index)
+            elif np.isscalar(denominator):
+                d = denominator
+            else:
+                d = clean_numeric(pd.Series(denominator, index=n.index))
+            result = n.div(d)
+        else:
+            d = clean_numeric(denominator)
+            n = clean_numeric(pd.Series(numerator, index=d.index))
+            result = n.div(d)
+        if isinstance(result, pd.Series):
+            return result.replace([np.inf, -np.inf], np.nan).where(d != 0)
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        result = np.divide(np.asarray(numerator, dtype=float), np.asarray(denominator, dtype=float))
+    result = np.where(np.isfinite(result), result, np.nan)
+    return float(result) if np.ndim(result) == 0 else result
 
 
 _NUM_RE = re.compile(r"^[-+]?\s*\d[\d.,\s]*\s*[A-Za-z%$€£°/²³µ.]*$")
@@ -162,20 +278,121 @@ def load_task(objective, files):
 
 def _key_variants(v):
     """Formes plausibles d'une clé : telle quelle, minuscule, sans préfixe 'XXX-', chiffres seuls (sans zéros de tête)."""
-    t = str(v).strip().lower()
-    out, pending = [], [t]
+    t = unicodedata.normalize("NFKC", str(v)).strip().casefold()
+    folded = "".join(ch for ch in unicodedata.normalize("NFKD", t) if not unicodedata.combining(ch))
+    out, pending = [], [t, folded]
     while pending:
         item = pending.pop()
         if not item or item in out:
             continue
         out.append(item)
+        compact = re.sub(r"[^a-z0-9]+", "", item)
+        if compact and compact != item:
+            pending.append(compact)
         for sep in ("-", "_", ":"):
             if sep in item:
                 pending.append(item.split(sep)[-1])
+        decimal_id = re.fullmatch(r"([a-z]*\d+)\.0+", item)
+        if decimal_id:
+            pending.append(decimal_id.group(1))
         m = re.fullmatch(r"[a-z]*0*(\d+)", item)
         if m:
             pending.append(m.group(1))
     return out
+
+
+def _composite_join_hint(dfs, dico):
+    """Create a temporary verified join key when two semantically matched fields form a composite key."""
+    import itertools
+    if len(dfs) != 2:
+        return None
+    (a_name, A), (b_name, B) = list(dfs.items())
+    a_desc = _table_descriptions(a_name, A.columns, dico)
+    b_desc = _table_descriptions(b_name, B.columns, dico)
+    generic = {"number", "code", "id", "key", "identifier", "value", "date", "year", "ref", "reference"}
+    matches = []
+    for ac in A.columns:
+        at = _toks(str(ac) + " " + a_desc.get(ac, "")) - generic
+        scores = []
+        for bc in B.columns:
+            bt = _toks(str(bc) + " " + b_desc.get(bc, "")) - generic
+            common = at & bt
+            if common:
+                scores.append((len(common), bc))
+        scores.sort(reverse=True)
+        if scores and (len(scores) == 1 or scores[0][0] > scores[1][0]):
+            matches.append((ac, scores[0][1], scores[0][0]))
+    if len(matches) < 2:
+        return None
+
+    def tuple_variants(values):
+        components = [_key_variants(value)[:6] for value in values]
+        if any(not xs for xs in components):
+            return set()
+        return set(itertools.product(*components))
+
+    candidates = []
+    for first, second in itertools.combinations(matches, 2):
+        if first[0] == second[0] or first[1] == second[1]:
+            continue
+        for fact_name, fact, fact_cols, dim_name, dim, dim_cols, semantic in (
+            (a_name, A, (first[0], second[0]), b_name, B, (first[1], second[1]), first[2] + second[2]),
+            (b_name, B, (first[1], second[1]), a_name, A, (first[0], second[0]), first[2] + second[2]),
+        ):
+            dim_rows = dim[list(dim_cols)].dropna()
+            if len(dim_rows) < 2:
+                continue
+            dim_tuples = [tuple(row) for row in dim_rows.itertuples(index=False, name=None)]
+            if len(set(dim_tuples)) < 0.95 * len(dim_tuples):
+                continue
+            fact_rows = fact[list(fact_cols)].dropna()
+            fact_tuples = set(tuple(row) for row in fact_rows.itertuples(index=False, name=None))
+            if len(fact_tuples) < 2 or len(fact_tuples) >= 0.95 * len(fact_rows):
+                continue
+            lookup, ambiguous = {}, set()
+            for idx, values in zip(dim_rows.index, dim_tuples):
+                for key in tuple_variants(values):
+                    if key in lookup and lookup[key] != idx:
+                        ambiguous.add(key)
+                    else:
+                        lookup.setdefault(key, idx)
+            found = 0
+            for values in fact_tuples:
+                rows = {lookup[key] for key in tuple_variants(values) if key in lookup and key not in ambiguous}
+                found += len(rows) == 1
+            coverage = found / len(fact_tuples)
+            if coverage >= 0.9:
+                candidates.append((coverage, semantic, fact_name, fact_cols, dim_name, dim_cols,
+                                   lookup, ambiguous, dim_rows.index.tolist()))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    best = candidates[0]
+    if len(candidates) > 1 and candidates[1][:2] == best[:2] and (candidates[1][2:6] != best[2:6]):
+        return None
+
+    _, _, fact_name, fact_cols, dim_name, dim_cols, lookup, ambiguous, dim_indices = best
+    fact, dim = dfs[fact_name], dfs[dim_name]
+    key_col = "__dsh_join_key"
+    suffix = 1
+    while key_col in fact.columns or key_col in dim.columns:
+        key_col = f"__dsh_join_key_{suffix}"
+        suffix += 1
+    ids = {idx: f"dsh{n}" for n, idx in enumerate(dim_indices)}
+    dim[key_col] = [ids.get(idx) for idx in dim.index]
+    fact_ids = []
+    for values in fact[list(fact_cols)].itertuples(index=False, name=None):
+        if any(pd.isna(value) for value in values):
+            fact_ids.append(np.nan)
+            continue
+        rows = {lookup[key] for key in tuple_variants(values) if key in lookup and key not in ambiguous}
+        fact_ids.append(ids[next(iter(rows))] if len(rows) == 1 else np.nan)
+    fact[key_col] = fact_ids
+    return (
+        f"Join key: dfs['{fact_name}']['{key_col}'] matches dfs['{dim_name}']['{key_col}'] "
+        f"(verified composite match: {fact_cols} ↔ {dim_cols}; temporary keys were added). "
+        "Use this key instead of either component alone."
+    )
 
 
 def align_keys(dfs, dico=""):
@@ -275,6 +492,10 @@ def align_keys(dfs, dico=""):
             dfs[an][ac] = dfs[an][ac].map(lambda x, m=mapped: m.get(x, x))
         notes.append(f"Join key: dfs['{an}']['{ac}'] matches dfs['{bn}']['{bc}'] "
                      "(already normalized: merge with left_on / right_on).")
+    if len(dfs) == 2 and not notes:
+        composite = _composite_join_hint(dfs, dico)
+        if composite:
+            notes.append(composite)
     return notes
 
 
@@ -315,7 +536,9 @@ def entity_hints(objective, dico):
 def describe(dfs):
     out = []
     for name, d in dfs.items():
-        cols = ", ".join(f"{c} ({str(t)[:8]})" for c, t in zip(d.columns, d.dtypes))
+        cols = ", ".join(
+            f"{c} ({str(d[c].dtype)[:8]}" + (f", NaN {d[c].isna().mean():.0%}" if d[c].isna().any() else "") + ")"
+            for c in d.columns)
         out.append(f"dfs['{name}']: {len(d)} rows; columns: {cols}")
         out.append(d.head(3).to_string(max_cols=14, max_colwidth=14))
     return "\n".join(out)
@@ -346,14 +569,21 @@ SYSTEM = (
 )
 
 TOOLS = {
-    "nofile": "Available: math, numpy as np, sympy, scipy.stats as stats, datetime.",
+    "nofile": "Available: math, numpy as np, sympy, scipy.stats as stats, datetime, safe_divide. "
+              "Use safe_divide(a, b) when b may be zero; zero/non-finite results become NaN.",
     "table": "Available: pandas as pd, numpy as np, math, scipy.stats as stats. The tables are in dict `dfs` "
-             "(keys = file names without .csv). They are already parsed: numbers are floats, missing values are NaN, "
-             "decimal commas and units are removed. Column codes are short: use ONLY the exact codes listed under each table. "
-             "With two tables, merge them first (keep all columns), then filter and aggregate on the merged frame.",
+             "(keys = file names without .csv). Numeric/date types are inferred only when parsing is unambiguous; "
+             "mixed columns may remain object, so inspect the dictionary, dtypes, and sample rows. Use clean_numeric(series) "
+             "only for dictionary-described measures, never for IDs, codes, or categories; use clean_dates(series, "
+             "dayfirst=...) for mixed date strings. Column codes are short: use ONLY the exact codes listed under each table. "
+             "For joins, prefer any supplied Join key hint and check key uniqueness and match coverage with merge(indicator=True); "
+             "preserve duplicate rows unless asked to remove them. Then filter and aggregate. For ratios with possible "
+             "zero denominators use safe_divide(numerator, denominator).",
     "fit": "Available: pandas as pd, numpy as np, math, stats, LinearRegression, LogisticRegression, r2_score. "
            "Tables are in dict `dfs` ('train', 'test'), already parsed (floats, NaN). Column codes are short: "
-           "find them in the dictionary. Drop rows with NaN in the used columns before fitting.",
+           "find them in the dictionary. Drop rows with NaN in the used columns before fitting. "
+           "LinearRegression and LogisticRegression automatically one-hot encode selected text columns; "
+           "unknown test categories are ignored. Use safe_divide(a, b) for possible zero denominators.",
 }
 
 EXAMPLES = {
@@ -461,19 +691,102 @@ def _make_models(unreg=False):
     """LinearRegression / LogisticRegression tolérants aux NaN (sklearn plante sinon) :
     fit ignore les lignes incomplètes, predict impute par la moyenne d'apprentissage.
     Si l'énoncé dit « sans régularisation », la logistique est non pénalisée (le défaut sklearn, C=1, change les
-    probabilités) ; elle est résolue sur variables standardisées puis ramenée à l'échelle d'origine."""
+    probabilités) ; elle est résolue sur variables standardisées puis ramenée à l'échelle d'origine.
+    Les colonnes catégorielles textuelles sont encodées en one-hot, sans toucher au chemin numérique habituel."""
     from sklearn.linear_model import LinearRegression as _LR, LogisticRegression as _LogR
+    from sklearn.preprocessing import OneHotEncoder as _OHE
 
     def _clean_fit(self, X, y, *a, **k):
-        Xd = pd.DataFrame(X).apply(pd.to_numeric, errors="coerce")
-        yv = pd.Series(np.asarray(y).ravel(), index=Xd.index)
+        raw = pd.DataFrame(X).copy()
+        yv = pd.Series(np.asarray(y).ravel(), index=raw.index)
+        numeric, categorical = [], []
+        converted = {}
+        for col in raw.columns:
+            values = pd.to_numeric(raw[col], errors="coerce").replace([np.inf, -np.inf], np.nan)
+            nonmissing = raw[col].notna()
+            rate = values[nonmissing].notna().mean() if nonmissing.any() else 0.0
+            if pd.api.types.is_numeric_dtype(raw[col]) or rate >= 0.9:
+                numeric.append(col)
+                converted[col] = values
+            else:
+                categorical.append(col)
+
+        if not categorical:
+            Xd = pd.DataFrame({col: converted[col] for col in raw.columns}, index=raw.index)
+            ok = Xd.notna().all(axis=1) & yv.notna()
+            if pd.api.types.is_numeric_dtype(yv):
+                y_num = pd.to_numeric(yv, errors="coerce")
+                ok &= np.isfinite(y_num)
+                yv = y_num
+            self._mu = Xd.loc[ok].mean()
+            self._dsh_numeric_cols = list(Xd.columns)
+            self._dsh_numeric_coef_idx = {col: i for i, col in enumerate(Xd.columns)}
+            self._dsh_cat_cols = []
+            self._dsh_ohe = None
+            self._dsh_input_cols = list(raw.columns)
+            self._dsh_encoded_names = list(raw.columns)
+            return Xd.loc[ok].values, yv.loc[ok].values
+
+        Xd = pd.DataFrame(index=raw.index)
+        for col in numeric:
+            Xd[col] = converted[col]
+        for col in categorical:
+            Xd[col] = raw[col]
         ok = Xd.notna().all(axis=1) & yv.notna()
-        self._mu = Xd[ok].mean()
-        return Xd[ok].values, yv[ok].values
+        if pd.api.types.is_numeric_dtype(yv):
+            y_num = pd.to_numeric(yv, errors="coerce")
+            ok &= np.isfinite(y_num)
+            yv = y_num
+        Xd, yv = Xd.loc[ok], yv.loc[ok]
+        if Xd.empty:
+            return np.empty((0, 0)), yv.values
+
+        self._dsh_numeric_cols = list(numeric)
+        self._dsh_cat_cols = list(categorical)
+        self._dsh_input_cols = list(raw.columns)
+        self._mu = Xd[numeric].mean() if numeric else pd.Series(dtype=float)
+        if categorical:
+            cat = Xd[categorical].astype(str)
+            try:
+                encoder = _OHE(handle_unknown="ignore", drop="first", sparse_output=False)
+            except TypeError:  # scikit-learn < 1.2
+                encoder = _OHE(handle_unknown="ignore", drop="first", sparse=False)
+            cat_encoded = encoder.fit_transform(cat)
+            self._dsh_ohe = encoder
+            try:
+                cat_names = list(encoder.get_feature_names_out(categorical))
+            except Exception:
+                cat_names = [f"{col}__onehot_{i}" for col in categorical for i in range(cat_encoded.shape[1])]
+        else:
+            cat_encoded = np.empty((len(Xd), 0))
+            self._dsh_ohe = None
+            cat_names = []
+        num_encoded = Xd[numeric].to_numpy(dtype=float) if numeric else np.empty((len(Xd), 0))
+        self._dsh_numeric_coef_idx = {col: i for i, col in enumerate(numeric)}
+        self._dsh_encoded_names = list(numeric) + cat_names
+        encoded = np.column_stack([num_encoded, cat_encoded])
+        if encoded.shape[1] == 0:
+            encoded = np.zeros((len(Xd), 1), dtype=float)
+            self._dsh_encoded_names = ["__constant__"]
+            self._dsh_numeric_coef_idx = {}
+        return encoded, yv.values
 
     def _clean_X(self, X):
-        Xd = pd.DataFrame(X).apply(pd.to_numeric, errors="coerce")
-        return Xd.fillna(self._mu).values
+        raw = pd.DataFrame(X, columns=getattr(self, "_dsh_input_cols", None)).copy()
+        if not getattr(self, "_dsh_cat_cols", []):
+            Xd = raw.reindex(columns=self._dsh_numeric_cols).apply(pd.to_numeric, errors="coerce")
+            Xd = Xd.replace([np.inf, -np.inf], np.nan).fillna(self._mu)
+            return Xd.to_numpy(dtype=float)
+        Xd = pd.DataFrame(index=raw.index)
+        for col in self._dsh_numeric_cols:
+            values = pd.to_numeric(raw[col], errors="coerce").replace([np.inf, -np.inf], np.nan)
+            Xd[col] = values.fillna(self._mu.get(col, 0.0))
+        num_encoded = Xd[self._dsh_numeric_cols].to_numpy(dtype=float) if self._dsh_numeric_cols else np.empty((len(raw), 0))
+        cat = raw.reindex(columns=self._dsh_cat_cols).fillna("__missing__").astype(str)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            cat_encoded = self._dsh_ohe.transform(cat)
+        return np.column_stack([num_encoded, cat_encoded])
 
     class LinearRegression(_LR):
         def fit(self, X, y, *a, **k):
@@ -484,8 +797,10 @@ def _make_models(unreg=False):
             return super().predict(_clean_X(self, X))
 
         def score(self, X, y, *a, **k):
-            Xv, yv = _clean_fit(self, X, y)
-            return super().score(Xv, yv, *a, **k)
+            Xv = _clean_X(self, X)
+            yv = pd.to_numeric(pd.Series(np.asarray(y).ravel()), errors="coerce")
+            ok = yv.notna() & np.isfinite(yv)
+            return super().score(Xv[ok.to_numpy()], yv[ok].to_numpy(), *a, **k)
 
     class LogisticRegression(_LogR):
         def __init__(self, penalty="l2", C=1.0, tol=1e-4, max_iter=5000, class_weight=None,
@@ -590,6 +905,43 @@ def _fake_read_csv(cdfs, extra=None):
 
 
 LAST_ERR = ""
+LAST_STATE = ""
+
+
+def _runtime_state(ns, max_frames=4):
+    """Compact DataFrame diagnostics captured after generated code fails."""
+    candidates = []
+    seen = set()
+    for name, value in ns.items():
+        if name == "dfs" or name.startswith("__"):
+            continue
+        if isinstance(value, pd.DataFrame):
+            priority = 0 if re.search(r"merge|join|result|output|\bm\b", name, re.I) else 1
+            candidates.append((priority, name, value))
+    tables = ns.get("dfs")
+    if isinstance(tables, dict):
+        for name, value in tables.items():
+            if isinstance(value, pd.DataFrame):
+                candidates.append((2, f"dfs['{name}']", value))
+    candidates.sort(key=lambda item: item[0])
+    reports = []
+    for _, name, frame in candidates:
+        if id(frame) in seen:
+            continue
+        seen.add(id(frame))
+        try:
+            details = []
+            for col in list(frame.columns)[:12]:
+                series = frame[col]
+                missing = series.isna().mean()
+                details.append(f"{col}:{series.dtype},NaN={missing:.0%}")
+            head = frame.head(2).to_string(index=False, max_cols=8, max_colwidth=28)
+            reports.append(f"{name} shape={frame.shape}; " + ", ".join(details) + "\nhead(2): " + head[:900])
+        except Exception as error:
+            reports.append(f"{name}: diagnostic failed ({type(error).__name__})")
+        if len(reports) >= max_frames:
+            break
+    return "\n\n".join(reports)[:5000]
 
 
 def _run_with_timeout(fn, timeout):
@@ -643,22 +995,35 @@ def run_code(code, dfs, timeout, obj=""):
     extra = {"data_dictionary": dd} if dd is not None else {}
     ns = {
         "pd": pd, "np": np, "math": math, "stats": stats, "sympy": sympy, "datetime": datetime,
+        "clean_numeric": clean_numeric, "clean_dates": clean_dates, "safe_divide": safe_divide,
         "LinearRegression": LinearRegression, "LogisticRegression": LogisticRegression, "r2_score": r2_score,
         "dfs": cdfs,
     }
     orig_read_csv = pd.read_csv
     pd.read_csv = _fake_read_csv(cdfs, extra)   # le code généré recharge souvent les CSV lui-même
 
-    def job():
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            exec(code, ns)
-        return to_float(ns.get("answer"))
+    global LAST_ERR, LAST_STATE
+    LAST_ERR, LAST_STATE = "", ""
 
-    global LAST_ERR
+    def job():
+        global LAST_STATE
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                exec(code, ns)
+            value = to_float(ns.get("answer"))
+            if value is None:
+                raise ValueError("answer missing, non-numeric, or non-finite")
+            return value
+        except BaseException:
+            LAST_STATE = _runtime_state(ns)
+            raise
+
     try:
         return _run_with_timeout(job, timeout)
     except BaseException as e:
         LAST_ERR = f"{type(e).__name__}: {str(e)[:150]}"
+        if not LAST_STATE:
+            LAST_STATE = _runtime_state(ns)
         return None
     finally:
         pd.read_csv = orig_read_csv
@@ -898,12 +1263,51 @@ def _dico_rows(dico):
     return rows
 
 
+def _dictionary_unit(name, column, dico):
+    table = stem(name).lower()
+    for line in dico.split("\n"):
+        parts = [p.strip() for p in line.split(" | ")]
+        if len(parts) >= 4 and stem(parts[0]).lower() == table and parts[1] == column:
+            return parts[3]
+    return ""
+
+
+def _unit_key(unit):
+    key = re.sub(r"[^a-z0-9]", "", str(unit).lower())
+    return {
+        "kg": "kg", "kilogram": "kg", "kilograms": "kg",
+        "tonne": "tonne", "tonnes": "tonne", "metricton": "tonne", "metrictons": "tonne",
+        "kwh": "kwh", "kilowatthour": "kwh", "kilowatthours": "kwh",
+        "mj": "mj", "megajoule": "mj", "megajoules": "mj",
+    }.get(key)
+
+
+def _explicit_unit_factor(objective, source_unit, target_unit):
+    """Return a conversion factor only when the objective states the exact unit equation."""
+    source, target = _unit_key(source_unit), _unit_key(target_unit)
+    if not source or not target:
+        return None
+    for m in re.finditer(r"\b1\s*([a-z][a-z0-9]*)\s*=\s*([\d.,]+)\s*([a-z][a-z0-9]*)\b", objective, re.I):
+        left, right = _unit_key(m.group(1)), _unit_key(m.group(3))
+        try:
+            factor = float(m.group(2).replace(",", "."))
+        except ValueError:
+            continue
+        if not math.isfinite(factor) or factor <= 0:
+            continue
+        if source == left and target == right:
+            return factor
+        if source == right and target == left:
+            return 1.0 / factor
+    return None
+
+
 def _dedupe_requested(objective):
     """Recognise the common ways tasks ask us to keep each record only once."""
     return bool(re.search(
-        r"\bduplicat\w*\b|\bdeduplicat\w*\b|\b(?:appear|appears|occur|occurs) twice\b|"
-        r"\bkeep one copy\b|\bsame identifier\b|\bcount each .{1,50} once\b|"
-        r"\bcount each .{1,50} only once\b",
+        r"\b(?:drop|remove|delete|ignore|exclude|deduplicat\w*|dedupe)\b[^.;?]{0,80}\bduplicat\w*\b|"
+        r"\b(?:keep|retain)\b[^.;?]{0,80}\bone copy\b|"
+        r"\bcount each .{1,50}\b(?:once|only once)\b",
         objective, re.I))
 
 
@@ -938,9 +1342,62 @@ def _identifier_column(name, columns, dico):
     return columns[0] if len(columns) else None
 
 
+def _distinct_target_column(objective, dfs, dico, table_name):
+    """Resolve the field whose distinct values are requested; never guess a row ID."""
+    o = " ".join(objective.lower().split())
+    patterns = (
+        r"\b(?:distinct|unique)\s+values?\s+(?:of|for|in)\s+(.+?)(?=\s+(?:are|is|in|among|for|from|where|whose|with|of the|across|over)\b|[?.;]|$)",
+        r"\b(?:distinct|unique)\s+(.+?)(?=\s+(?:are|is|in|among|for|from|where|whose|with|of the|across|over)\b|[?.;]|$)",
+        r"\bvalues?\s+of\s+(.+?)(?=\s+(?:are|is|in|among|for|from|where|whose|with|of the|across|over)\b|[?.;]|$)",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, o)
+        if not match:
+            continue
+        phrase = match.group(1).strip(" ,.;:()")
+        if re.fullmatch(r"(?:rows?|records?|entries|observations|people|persons)", phrase):
+            return None
+        resolved = _resolve_dico_column(phrase, dfs, dico)
+        if resolved and resolved[0] == table_name:
+            return resolved[1]
+    return None
+
+
+def _has_unparsed_filter_intent(objective, conditions):
+    """Avoid deterministic aggregates when the question contains an unsupported filter."""
+    o = " ".join(objective.lower().split())
+    # Missing-value handling is often global task metadata, not a row filter.
+    filter_text = re.sub(
+        r"\b(?:ignore|leave|exclude|drop|values?)\b[^.;?]{0,160}\b(?:missing|not recorded|unrecorded)\b[^.;?]*(?:[.;?]|$)",
+        " ", o)
+    if not conditions and re.search(
+        r"\b(?:where|whose|among|excluding|except|without|not equal|different from|"
+        r"greater than|less than|at least|at most|no more than|no less than|"
+        r"on or after|on or before|after|before|is not|is missing|is blank|is null|is recorded|"
+        r"contains|starts with|ends with)\b", filter_text
+    ):
+        return True
+    if re.search(r"\bbetween\s+-?\d", filter_text) and not any(c[2] == "between" for c in conditions):
+        return True
+    # Membership and disjunctions are not represented by the current condition parser.
+    # Exclude the challenge's standard missing-value instruction; its "or" is not a filter.
+    logical_text = re.sub(r"\bon or after\b", " ", filter_text)
+    logical_text = re.sub(r"\b(?:missing|blank|null|unknown|not available)\s+or\s+(?:not recorded|missing|blank|null|unknown)\b", " ", logical_text)
+    if re.search(r"\b(?:one of|any of|either|or)\b", logical_text):
+        return True
+    return False
+
+
 def _resolve_dico_column(phrase, dfs, dico):
     """Resolve a natural-language field phrase only when one dictionary column clearly fits."""
-    q = _toks(phrase)
+    def field_toks(text):
+        tokens = _toks(text)
+        # `_toks` intentionally keeps its existing behavior for the fit/no-file paths.
+        # Add the common English -ies -> -y plural form only for table-field matching.
+        tokens.update(w[:-3] + "y" for w in re.findall(r"[a-z]+", str(text).lower()) if w.endswith("ies") and len(w) > 4)
+        return tokens
+
+    q = field_toks(phrase)
     if not q:
         return None
     q_order = [w for w in re.findall(r"[a-z]+", phrase.lower()) if w not in _STOP]
@@ -951,9 +1408,9 @@ def _resolve_dico_column(phrase, dfs, dico):
         name = stem(f).lower()
         if name not in dfs or c not in dfs[name].columns:
             continue
-        words = _toks(desc) | _toks(c)
+        words = field_toks(desc) | field_toks(c)
         overlap = len(q & words)
-        score = 3 * len(q & _toks(desc)) + len(q & _toks(c))
+        score = 3 * len(q & field_toks(desc)) + len(q & field_toks(c))
         if q_last & words:
             score += 2
         dnorm = re.sub(r"[^a-z0-9]", "", (desc + " " + c).lower())
@@ -1007,7 +1464,137 @@ def table_stat_rule(objective, dfs, dico):
     # Leave row-level ratios and grouped/filtered questions to their dedicated rules.
     if re.search(r"\bdivided by\b|\bconsider the .+?\s+per\s+", o) or re.search(r"\bfor each\b|\brank\b|\bgrouped by\b", o):
         return None
+
+    # Count values in the requested field, not rows via an arbitrary identifier.
+    if re.search(r"\b(?:distinct|unique)\b", o) and re.search(r"\b(?:how many|number of|count of|count the number of)\b", o):
+        table_name, df = next(iter(dfs.items()))
+        conditions = [c for c in _parse_table_conditions(o, dfs, dico) if c[0] == table_name]
+        if _has_unparsed_filter_intent(o, conditions):
+            return None
+        target = _distinct_target_column(o, dfs, dico, table_name)
+        if not target and re.search(r"\b(?:distinct|unique)\s+(?:rows?|records?|entries|observations)\b", o):
+            target = _identifier_column(table_name, df.columns, dico)
+        if not target:
+            return None
+        mask = pd.Series(True, index=df.index)
+        for _, col, op, val, _ in conditions:
+            mask &= _condition_mask(df, col, op, val).fillna(False)
+        return float(df.loc[mask, target].nunique(dropna=True))
+
+    # The challenge's own example uses distinct order statistics for "second highest".
+    ordinals = {"second": 2, "2nd": 2, "third": 3, "3rd": 3, "fourth": 4, "4th": 4,
+                "fifth": 5, "5th": 5, "sixth": 6, "6th": 6, "seventh": 7, "7th": 7,
+                "eighth": 8, "8th": 8, "ninth": 9, "9th": 9, "tenth": 10, "10th": 10}
+    order_stat = re.search(
+        r"\b(second|2nd|third|3rd|fourth|4th|fifth|5th|sixth|6th|seventh|7th|eighth|8th|ninth|9th|tenth|10th)"
+        r"[- ]+(highest|largest|greatest|lowest|smallest|least)\b", o)
+    if order_stat:
+        tail = o[order_stat.end():].strip()
+        tail = re.sub(r"^(?:value\s+of|the\s+value\s+of|the)\s+", "", tail)
+        cut = re.search(
+            r"\b(?:over all|across all|throughout all|among|where|whose|with|for|on or after|on or before|"
+            r"strictly greater than|strictly less than|greater than|less than|at least|at most|between)\b|[?.;]", tail)
+        phrase = tail[:cut.start()] if cut else tail
+        col = _resolve_dico_column(phrase.strip(" ,.;:()"), dfs, dico)
+        if not col or col[0] not in dfs:
+            return None
+        conditions = [c for c in _parse_table_conditions(o, dfs, dico) if c[0] == col[0]]
+        if _has_unparsed_filter_intent(o, conditions):
+            return None
+        df = dfs[col[0]]
+        descriptions = _table_descriptions(col[0], df.columns, dico)
+        numeric_values = _numeric_metric(df[col[1]], descriptions.get(col[1], ""))
+        if numeric_values is None:
+            return None
+        mask = pd.Series(True, index=df.index)
+        for _, cond_col, cond_op, val, _ in conditions:
+            mask &= _condition_mask(df, cond_col, cond_op, val).fillna(False)
+        values = numeric_values.loc[mask].dropna().drop_duplicates()
+        rank = ordinals[order_stat.group(1)]
+        if len(values) < rank:
+            return None
+        ascending = order_stat.group(2) in ("lowest", "smallest", "least")
+        return float(values.sort_values(ascending=ascending).iloc[rank - 1])
+
+    # A pair statistic is unambiguous when both named fields resolve to the same table.
+    corr = re.search(
+        r"\b(?:pearson\s+)?correlation(?: coefficient)?\s+between\s+(.+?)\s+and\s+(.+?)"
+        r"(?=\s+(?:for|among|over|across|within|where|whose|with)\b|[?.;]|$)", o)
+    if not corr:
+        corr = re.search(
+            r"\b(?:pearson\s+)?correlation(?: coefficient)?\s+of\s+(.+?)\s+and\s+(.+?)"
+            r"(?=\s+(?:for|among|over|across|within|where|whose|with)\b|[?.;]|$)", o)
+    if corr:
+        left = _resolve_dico_column(corr.group(1), dfs, dico)
+        right = _resolve_dico_column(corr.group(2), dfs, dico)
+        if not left or not right or left[0] != right[0]:
+            return None
+        conditions = [c for c in _parse_table_conditions(o, dfs, dico) if c[0] == left[0]]
+        if _has_unparsed_filter_intent(o, conditions):
+            return None
+        df = dfs[left[0]]
+        descriptions = _table_descriptions(left[0], df.columns, dico)
+        left_values = _numeric_metric(df[left[1]], descriptions.get(left[1], ""))
+        right_values = _numeric_metric(df[right[1]], descriptions.get(right[1], ""))
+        if left_values is None or right_values is None:
+            return None
+        mask = pd.Series(True, index=df.index)
+        for _, col, op, val, _ in conditions:
+            mask &= _condition_mask(df, col, op, val).fillna(False)
+        pair = pd.DataFrame({left[1]: left_values.loc[mask], right[1]: right_values.loc[mask]}).dropna()
+        if len(pair) < 2:
+            return None
+        value = pair[left[1]].corr(pair[right[1]])
+        return float(value) if pd.notna(value) and math.isfinite(float(value)) else None
+
     df_name, df = next(iter(dfs.items()))
+    # A stated unit equation makes these converted whole-table means deterministic.
+    unit_request = re.search(
+        r"\bconsider\s+(?:the\s+)?(.+?)\s+in\s+([a-z][a-z0-9 -]*?)\s*\(\s*1\s+[a-z][a-z0-9]*\s*=\s*[\d.,]+\s*[a-z][a-z0-9]*\b",
+        o)
+    converted_mean = re.search(r"\b(?:its\s+(mean|average)|(mean|average)\s+of\s+it)\b", o)
+    if unit_request and converted_mean:
+        resolved = _resolve_dico_column(unit_request.group(1), dfs, dico)
+        if not resolved or resolved[0] != df_name:
+            return None
+        conditions = _parse_table_conditions(objective, dfs, dico)
+        clean_objective = re.sub(
+            r"\b[\w.-]+\.csv contains duplicated rows\b[^.;?]*(?:[.;?]|$)",
+            " ", o)
+        if conditions or _has_unparsed_filter_intent(clean_objective, conditions):
+            return None
+        factor = _explicit_unit_factor(o, _dictionary_unit(resolved[0], resolved[1], dico), unit_request.group(2).strip())
+        if factor is None:
+            return None
+        descriptions = _table_descriptions(resolved[0], dfs[resolved[0]].columns, dico)
+        numeric_values = _numeric_metric(dfs[resolved[0]][resolved[1]], descriptions.get(resolved[1], ""))
+        if numeric_values is None:
+            return None
+        values = numeric_values.dropna()
+        return float(values.mean() * factor) if not values.empty else None
+
+    # Count missing values only when the field and missingness are both explicit.
+    missing_count = re.search(
+        r"\bhow many\b.*?\b(?:have|has)\s+no\s+(?:recorded\s+)?(.+?)(?=[?.;]|$)", o)
+    if not missing_count:
+        missing_count = re.search(
+            r"\bhow many\b.*?\bis\s+(?:the\s+)?(.+?)\s+(?:missing|not recorded|unrecorded)\b", o)
+    if missing_count:
+        resolved = _resolve_dico_column(missing_count.group(1), dfs, dico)
+        if not resolved:
+            return None
+        conditions = [c for c in _parse_table_conditions(objective, dfs, dico) if c[0] == resolved[0]]
+        clean_objective = re.sub(
+            r"\b[\w.-]+\.csv contains duplicated rows\b[^.;?]*(?:[.;?]|$)",
+            " ", o)
+        if _has_unparsed_filter_intent(clean_objective, conditions):
+            return None
+        source = dfs[resolved[0]]
+        mask = pd.Series(True, index=source.index)
+        for _, cond_col, cond_op, value, _ in conditions:
+            mask &= _condition_mask(source, cond_col, cond_op, value).fillna(False)
+        return float(source.loc[mask, resolved[1]].isna().sum())
+
     if re.search(r"\bhow many\b", o) and re.search(r"\b(?:have|has)\s+(?:a |an )?(?:recorded )", o):
         if re.search(r"\b(?:among|whose|with|born|on or after|on or before)\b", o):
             return None
@@ -1032,19 +1619,28 @@ def table_stat_rule(objective, dfs, dico):
         if not whole_scope:
             return None
         m = re.search(
-            rf"\b(maximum|minimum|median|mean|average|sum)\s+(?:of\s+)?(?:the\s+)?(.+?)(?={scope_end}|\s*\(|[?.]|$)", o)
+            rf"\b(standard deviation|std\.?\s*dev(?:iation)?|variance|range|spread|maximum|minimum|median|mean|average|sum)\s+(?:of\s+)?(?:the\s+)?(.+?)(?={scope_end}|\s*\(|[?.]|$)", o)
         if not m:
             return None
         op, phrase = m.group(1), m.group(2)
-        operation = {"maximum": "max", "minimum": "min", "average": "mean"}.get(op, op)
+        operation = {
+            "maximum": "max", "minimum": "min", "average": "mean", "std dev": "std",
+            "std. dev": "std", "std deviation": "std", "standard deviation": "std",
+        }.get(op, op)
 
     col = _resolve_dico_column(phrase, dfs, dico)
     if not col:
         return None
     # "Over all" may still describe a filtered population. Do not return its unfiltered statistic.
-    if _parse_table_conditions(o, dfs, dico):
+    conditions = _parse_table_conditions(o, dfs, dico)
+    if conditions or (operation in ("std", "variance", "range", "spread") and _has_unparsed_filter_intent(o, conditions)):
         return None
-    series = pd.to_numeric(dfs[col[0]][col[1]], errors="coerce").dropna()
+    raw_series = dfs[col[0]][col[1]]
+    descriptions = _table_descriptions(col[0], dfs[col[0]].columns, dico)
+    numeric_values = _numeric_metric(raw_series, descriptions.get(col[1], ""))
+    if numeric_values is None:
+        return None
+    series = numeric_values.dropna()
     if series.empty:
         return None
     if operation == "quantile":
@@ -1059,13 +1655,20 @@ def table_stat_rule(objective, dfs, dico):
         return float(series.mean())
     if operation == "sum":
         return float(series.sum())
+    if operation == "range" or operation == "spread":
+        return float(series.max() - series.min())
+    if operation in ("std", "variance"):
+        ddof = 0 if re.search(r"\bpopulation\b", o) else 1
+        if len(series) <= ddof:
+            return None
+        return float(series.std(ddof=ddof) if operation == "std" else series.var(ddof=ddof))
     return None
 
 
 def _condition_context(prefix):
     """Keep the field phrase nearest to a filter operator/value."""
     low = prefix.lower()
-    markers = (" and ", " with ", " whose ", " have ", " has ", " among ", " of ", " over ", " born ")
+    markers = (" and ", " with ", " whose ", " have ", " has ", " among ", " where ", " of ", " over ", " born ")
     cuts = [(low.rfind(mark), len(mark)) for mark in markers if low.rfind(mark) >= 0]
     for pos, size in sorted(cuts, reverse=True):
         value = low[pos + size:].strip()
@@ -1141,7 +1744,7 @@ def _parse_table_conditions(objective, dfs, dico):
                 out.append((col[0], col[1], op, val, m.start()))
                 date_spans.append(m.span())
 
-    comparison_re = r"(strictly greater than|strictly less than|greater than|less than|at least|at most|no more than|no less than|above|below)\s+(-?\d+(?:\.\d+)?)"
+    comparison_re = r"(strictly greater than|strictly less than|greater than|less than|at least|at most|no more than|no less than|not equal to|different from|equal to|equals?|above|below)\s+(-?\d+(?:\.\d+)?)"
     for m in re.finditer(comparison_re, o, re.I):
         if any(a <= m.start() < b for a, b in date_spans):
             continue
@@ -1150,8 +1753,24 @@ def _parse_table_conditions(objective, dfs, dico):
         if not col:
             continue
         op = m.group(1)
-        op = "gt" if ("greater than" in op or op == "above") else ("lt" if ("less than" in op or op == "below") else ("ge" if op in ("at least", "no less than") else "le"))
+        if op in ("not equal to", "different from"):
+            op = "ne"
+        elif op in ("equal", "equals", "equal to"):
+            op = "eq"
+        else:
+            op = "gt" if ("greater than" in op or op == "above") else ("lt" if ("less than" in op or op == "below") else ("ge" if op in ("at least", "no less than") else "le"))
         out.append((col[0], col[1], op, float(m.group(2)), m.start()))
+
+    # Explicit missingness tests on a named field.
+    missing_re = r"\b(is not missing|is not blank|is not null|is missing|is blank|is null|is not recorded|is recorded)\b"
+    for m in re.finditer(missing_re, o, re.I):
+        ctx = _condition_context(o[:m.start()])
+        col = _condition_column(ctx, dfs, dico)
+        if col:
+            op = "not_missing" if re.search(r"not|recorded", m.group(1)) and "not recorded" not in m.group(1) else "is_missing"
+            if m.group(1) in ("is recorded",):
+                op = "not_missing"
+            out.append((col[0], col[1], op, None, m.start()))
 
     # Closed numeric ranges such as "with a sale amount between 10 and 20".
     for m in re.finditer(r"\bbetween\s+(-?\d+(?:\.\d+)?)\s+and\s+(-?\d+(?:\.\d+)?)", o):
@@ -1170,20 +1789,24 @@ def _parse_table_conditions(objective, dfs, dico):
     # Exact quoted categories, including a field named after the quote: 'N' in the scholarship field.
     for m in re.finditer(r"['\u2018\u201c]([^'\u2019\u201d]{1,80})['\u2019\u201d]", o):
         before, after = o[:m.start()], o[m.end():]
-        eq_pos = before.rfind(" is ")
-        if eq_pos >= 0 and len(before) - eq_pos <= 45:
-            ctx = _condition_context(before[:eq_pos])
+        op_match = re.search(r"\b(is\s+not|is|does\s+not\s+equal|not\s+equal\s+to|different\s+from|equals?|equal\s+to)\s*$", before)
+        if op_match and len(before) - op_match.start() <= 50:
+            ctx = _condition_context(before[:op_match.start()])
+            category_op = "ne" if re.search(r"not|different", op_match.group(1)) else "eq"
         else:
             fm = re.match(r"\s+in\s+(?:the\s+)?(.+?)\s+field\b", after)
             if not fm:
-                continue
+                fm = re.match(r"\s+as\s+(?:the\s+)?(.+?)(?=[?.;,]|$)", after)
+                if not fm:
+                    continue
             ctx = fm.group(1)
+            category_op = "eq"
         value = m.group(1).strip()
         if value.lower() in NA_TOKENS or re.search(r"(?:separat|missing value|not recorded|not available)[^.;]{0,60}$", before):
             continue
         col = _condition_column(ctx, dfs, dico)
         if col:
-            out.append((col[0], col[1], "eq", value, m.start()))
+            out.append((col[0], col[1], category_op, value, m.start()))
 
     out.extend(_coded_conditions(o, dfs, dico))
 
@@ -1228,8 +1851,20 @@ def _parse_table_conditions(objective, dfs, dico):
 
 def _condition_mask(df, col, op, value):
     series = df[col]
+    if op == "is_missing":
+        return series.isna()
+    if op == "not_missing":
+        return series.notna()
+    if op in ("eq", "ne") and pd.api.types.is_numeric_dtype(series):
+        number = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+        if pd.isna(number):
+            return pd.Series(False, index=df.index) if op == "eq" else series.notna()
+        numeric = pd.to_numeric(series, errors="coerce")
+        return numeric == number if op == "eq" else (series.notna() & (numeric != number))
     if op == "eq":
         return series.astype(str).str.strip().str.lower() == str(value).strip().lower()
+    if op == "ne":
+        return series.notna() & (series.astype(str).str.strip().str.lower() != str(value).strip().lower())
     if op in ("date_ge", "date_le", "date_gt", "date_lt"):
         dates = pd.to_datetime(series, errors="coerce")
         return {"date_ge": dates >= value, "date_le": dates <= value,
@@ -1243,12 +1878,14 @@ def _condition_mask(df, col, op, value):
             return pd.Series(False, index=df.index)
         month, year = value
         return (series.dt.month == month) & (series.dt.year == year)
-    numeric = pd.to_numeric(series, errors="coerce")
+    numeric = _numeric_metric(series, force=True)
+    if numeric is None:
+        numeric = pd.to_numeric(series, errors="coerce")
     if op == "between":
         low, high = value
         return numeric.between(low, high, inclusive="both")
     return {"gt": numeric > value, "ge": numeric >= value, "lt": numeric < value,
-            "le": numeric <= value}[op]
+            "le": numeric <= value, "ne": numeric != value, "eq": numeric == value}[op]
 
 
 def table_filter_rule(objective, dfs, dico):
@@ -1296,29 +1933,57 @@ def table_filter_rule(objective, dfs, dico):
         for _, col, op, val, _ in conditions:
             mask &= _condition_mask(df, col, op, val).fillna(False)
         if re.search(r"\b(?:distinct|unique)\b", o):
-            key = _identifier_column(name, df.columns, dico)
-            return float(df.loc[mask, key].nunique(dropna=True)) if key in df.columns else None
+            if _has_unparsed_filter_intent(o, conditions):
+                return None
+            target = _distinct_target_column(o, dfs, dico, name)
+            if not target:
+                # Row-level uniqueness is supported only when the question says so explicitly.
+                if not re.search(r"\b(?:distinct|unique)\s+(?:rows?|records?|entries|observations)\b", o):
+                    return None
+                target = _identifier_column(name, df.columns, dico)
+            return float(df.loc[mask, target].nunique(dropna=True)) if target in df.columns else None
         return float(mask.sum())
 
-    # Sum, mean, median, min, and max over a filtered subset.
-    metric = re.search(r"\b(sum|total|average|mean|median|maximum|minimum|max|min)\b", o)
+    # Common scalar aggregates over a filtered subset.
+    metric = re.search(
+        r"\b(standard deviation|std\.?\s*dev(?:iation)?|variance|range|spread|"
+        r"sum|total|average|mean|median|maximum|minimum|max|min)\b", o)
     if not metric:
         return None
     op = metric.group(1)
-    op = {"total": "sum", "average": "mean", "maximum": "max", "minimum": "min"}.get(op, op)
+    op = {
+        "total": "sum", "average": "mean", "maximum": "max", "minimum": "min",
+        "std dev": "std", "std. dev": "std", "std deviation": "std",
+        "std. deviation": "std", "standard deviation": "std",
+    }.get(op, op)
+    if op in ("std", "variance", "range", "spread") and _has_unparsed_filter_intent(o, conditions):
+        return None
     tail = o[metric.end():].strip()
     tail = re.sub(r"^(?:of\s+)?the\s+", "", tail)
     # Stop at the table population or its filter; preserve field names such as "number of items".
     bounds = [m.start() for m in re.finditer(r"\bof the (?:orders?|shipments?|pupils?|students?|flats?|readings?|loans?|stays?|rows?|records?)\b|\bover all\b|\bamong\b|\bwith\b|\bwhose\b|\bon or after\b|\bon or before\b|\bat least\b|\bstrictly (?:greater|less) than\b", tail)]
+    # A parsed categorical condition may be phrased as "for region 'North'" or "where status is 'open'".
+    for _, _, _, _, pos in conditions:
+        if pos > metric.start():
+            between = o[metric.end():pos]
+            cues = list(re.finditer(r"\b(?:for|where|with|among|whose)\b", between))
+            if cues:
+                bounds.append(cues[-1].start())
     phrase = tail[:min(bounds)] if bounds else tail
     phrase = phrase.strip(" ,.;:()")
     resolved = _resolve_dico_column(phrase, dfs, dico)
     if not resolved or resolved[0] != name:
         return None
+    if op in ("std", "variance", "range", "spread") and df[resolved[1]].dtype.kind not in "fiub":
+        return None
     mask = pd.Series(True, index=df.index)
     for _, col, cond_op, val, _ in conditions:
         mask &= _condition_mask(df, col, cond_op, val).fillna(False)
-    values = pd.to_numeric(df.loc[mask, resolved[1]], errors="coerce").dropna()
+    descriptions = _table_descriptions(name, df.columns, dico)
+    numeric_values = _numeric_metric(df[resolved[1]], descriptions.get(resolved[1], ""))
+    if numeric_values is None:
+        return None
+    values = numeric_values.loc[mask].dropna()
     if values.empty:
         return None
     if op == "sum":
@@ -1331,6 +1996,13 @@ def table_filter_rule(objective, dfs, dico):
         return float(values.max())
     if op == "min":
         return float(values.min())
+    if op in ("range", "spread"):
+        return float(values.max() - values.min())
+    if op in ("std", "variance"):
+        ddof = 0 if re.search(r"\bpopulation\b", o) else 1
+        if len(values) <= ddof:
+            return None
+        return float(values.std(ddof=ddof) if op == "std" else values.var(ddof=ddof))
     return None
 
 
@@ -1368,9 +2040,12 @@ def table_derive_rule(objective, dfs, dico):
     mask = pd.Series(True, index=df.index)
     for _, col, op, val, _ in conditions:
         mask &= _condition_mask(df, col, op, val).fillna(False)
-    numerator = pd.to_numeric(df[num_col[1]], errors="coerce")
-    denominator = pd.to_numeric(df[den_col[1]], errors="coerce").replace(0, np.nan)
-    ratio = numerator / denominator
+    descriptions = _table_descriptions(name, df.columns, dico)
+    numerator = _numeric_metric(df[num_col[1]], descriptions.get(num_col[1], ""))
+    denominator = _numeric_metric(df[den_col[1]], descriptions.get(den_col[1], ""))
+    if numerator is None or denominator is None:
+        return None
+    ratio = safe_divide(numerator, denominator)
     if re.search(r"amount billed is in thousand euros", o) and re.search(r"\bin euros per day\b", o):
         ratio = ratio * 1000
     values = ratio[mask].replace([np.inf, -np.inf], np.nan).dropna()
@@ -1388,34 +2063,58 @@ def table_derive_rule(objective, dfs, dico):
 
 
 def table_group_rule(objective, dfs, dico):
-    """Aggregate by one dictionary field, then return a rank or an extreme of the group values."""
+    """Aggregate by one dictionary field, then summarize the resulting group values."""
     if len(dfs) != 1:
         return None
     o = " ".join(objective.lower().split())
     name, df = next(iter(dfs.items()))
     ranking = re.search(r"rank the (.+?) values by the (mean|average|sum|total|median) (.+?)(?:,|\?|\.| from highest| from lowest)", o)
     row_count = False
+    summary_operation = None
     if ranking:
         group_phrase, agg, metric_phrase = ranking.groups()
         agg = {"average": "mean", "total": "sum"}.get(agg, agg)
     else:
-        grouped = re.search(
-            r"\b(sum|total|mean|average|median|maximum|minimum|max|min)\s+(?:of\s+)?(.+?)\s+"
+        nested = re.search(
+            r"\b(mean|average|median|sum|total|maximum|minimum|max|min|largest|smallest)\s+of\s+(?:the\s+)?"
+            r"(sum|total|mean|average|median|maximum|minimum|max|min)\s+(?:of\s+)?(.+?)\s+"
             r"(?:for each|for every|within each|in each|per|by)\s+(.+?)(?:\.|;|,|\?|\s+consider only\b)", o)
-        if not grouped:
-            counted = re.search(
-                r"\b(?:compute|calculate|find|determine)\s+(?:the\s+)?number of\s+(.+?)\s+"
-                r"(?:for each|for every|within each|in each|per|by)\s+(.+?)(?:\.|;|,|\?|\s+consider only\b)", o)
-            if not counted:
-                return None
-            metric_phrase, group_phrase = counted.groups()
-            agg, row_count = "count", True
-        else:
-            agg, metric_phrase, group_phrase = grouped.groups()
+        if nested:
+            summary_operation, agg, metric_phrase, group_phrase = nested.groups()
+            summary_operation = {"average": "mean", "total": "sum", "maximum": "max",
+                                 "minimum": "min", "largest": "max", "smallest": "min"}.get(
+                                     summary_operation, summary_operation)
             agg = {"total": "sum", "average": "mean", "maximum": "max", "minimum": "min"}.get(agg, agg)
+        else:
+            grouped = re.search(
+                r"\b(sum|total|mean|average|median|maximum|minimum|max|min)\s+(?:of\s+)?(.+?)\s+"
+                r"(?:for each|for every|within each|in each|per|by)\s+(.+?)(?:\.|;|,|\?|\s+consider only\b)", o)
+            if not grouped:
+                counted = re.search(
+                    r"\b(?:compute|calculate|find|determine)\s+(?:the\s+)?number of\s+(.+?)\s+"
+                    r"(?:for each|for every|within each|in each|per|by)\s+(.+?)(?:\.|;|,|\?|\s+consider only\b)", o)
+                if not counted:
+                    return None
+                metric_phrase, group_phrase = counted.groups()
+                agg, row_count = "count", True
+            else:
+                agg, metric_phrase, group_phrase = grouped.groups()
+                agg = {"total": "sum", "average": "mean", "maximum": "max", "minimum": "min"}.get(agg, agg)
 
     metric = None if row_count else _resolve_dico_column(metric_phrase, dfs, dico)
     group = _resolve_dico_column(group_phrase, dfs, dico)
+    if not group:
+        year_group = re.match(r"\s*year\s+of\s+(.+?)\s*", group_phrase)
+        if year_group:
+            candidate = _resolve_dico_column(year_group.group(1), dfs, dico)
+            if candidate and candidate[0] == name:
+                desc = _table_descriptions(name, df.columns, dico).get(candidate[1], "")
+                if df[candidate[1]].dtype.kind == "M" or re.search(r"\bdate\b", desc, re.I):
+                    group = candidate
+            if not group:
+                date_cols = [c for c in df.columns if df[c].dtype.kind == "M"]
+                if len(date_cols) == 1:
+                    group = (name, date_cols[0])
     if (not row_count and not metric) or not group or (metric and metric[0] != name) or group[0] != name or (metric and metric[1] == group[1]):
         return None
     conditions = [c for c in _parse_table_conditions(o, dfs, dico) if c[0] == name]
@@ -1438,7 +2137,10 @@ def table_group_rule(objective, dfs, dico):
     if row_count:
         grouped_values = groups.dropna(subset=["__group"]).groupby("__group").size()
     else:
-        vals = pd.to_numeric(df[metric[1]], errors="coerce")
+        descriptions = _table_descriptions(name, df.columns, dico)
+        vals = _numeric_metric(df[metric[1]], descriptions.get(metric[1], ""))
+        if vals is None:
+            return None
         groups["__value"] = vals.loc[mask]
         grouped_values = groups.dropna(subset=["__group", "__value"]).groupby("__group")["__value"].agg(agg)
     if grouped_values.empty:
@@ -1474,6 +2176,13 @@ def table_group_rule(objective, dfs, dico):
         descending = "highest" in o or "highest (rank 1)" in o
         return float(grouped_values.rank(method="min", ascending=not descending).loc[target_value])
 
+    if summary_operation:
+        vals = pd.to_numeric(grouped_values, errors="coerce").dropna()
+        if vals.empty:
+            return None
+        return float({"mean": vals.mean, "median": vals.median, "sum": vals.sum,
+                      "max": vals.max, "min": vals.min}[summary_operation]())
+
     if re.search(r"difference between the largest and (?:the )?smallest", o):
         return float(grouped_values.max() - grouped_values.min())
     if re.search(r"\b(?:smallest|lowest|minimum) of these values\b", o):
@@ -1487,7 +2196,13 @@ def table_group_rule(objective, dfs, dico):
 
 def table_join_rule(objective, dfs, dico):
     """Join one fact table to one lookup table, filter, and aggregate a value from the fact table."""
-    if len(dfs) != 2 or not re.search(r"\bbelong to\b|\bwhose\b", objective.lower()):
+    if len(dfs) != 2:
+        return None
+    o = " ".join(objective.lower().split())
+    group_request = re.search(
+        r"\bgroup\s+(?:the\s+)?(.+?)\s+by\s+(?:the\s+)?(.+?)\s+and\s+compute\s+(?:the\s+)?"
+        r"(mean|average|median|sum|total|maximum|minimum|max|min)\s+(.+?)\s+per group\b", o)
+    if not group_request and not re.search(r"\bbelong to\b|\bwhose\b", o):
         return None
     notes = align_keys(dfs, dico)
     key_note = next((n for n in notes if "Join key:" in n), None)
@@ -1499,7 +2214,6 @@ def table_join_rule(objective, dfs, dico):
     fact, fact_key, dim, dim_key = m.groups()
     if fact == dim:
         return None
-    o = " ".join(objective.lower().split())
     conditions = _parse_table_conditions(o, dfs, dico)
     frames = {name: df.copy() for name, df in dfs.items()}
     for name, col, op, val, _ in conditions:
@@ -1509,6 +2223,40 @@ def table_join_rule(objective, dfs, dico):
     if frames[fact].empty or frames[dim].empty:
         return None
 
+    if group_request:
+        clean_objective = re.sub(
+            r"\b[\w.-]+\.csv contains duplicated rows\b[^.;?]*(?:[.;?]|$)",
+            " ", o)
+        if _has_unparsed_filter_intent(clean_objective, conditions):
+            return None
+        _, group_phrase, agg, metric_phrase = group_request.groups()
+        group_col = _resolve_dico_column(group_phrase, dfs, dico)
+        metric_col = _resolve_dico_column(metric_phrase, dfs, dico)
+        if not group_col or group_col[0] != dim or not metric_col or metric_col[0] != fact:
+            return None
+        outer = re.search(r"\b(largest|highest|maximum|max|smallest|lowest|minimum|min)\s+value\b", o)
+        if not outer:
+            return None
+        left = frames[fact].copy()
+        left["__join"] = left[fact_key]
+        descriptions = _table_descriptions(fact, frames[fact].columns, dico)
+        metric_values = _numeric_metric(left[metric_col[1]], descriptions.get(metric_col[1], ""))
+        if metric_values is None:
+            return None
+        left["__metric"] = metric_values
+        right = frames[dim][[dim_key, group_col[1]]].copy()
+        right = right.rename(columns={dim_key: "__join", group_col[1]: "__group"})
+        joined = left.merge(right, on="__join", how="inner")
+        values = joined.dropna(subset=["__group", "__metric"])
+        if values.empty:
+            return None
+        agg_name = {"average": "mean", "total": "sum", "maximum": "max", "minimum": "min"}.get(agg, agg)
+        grouped_values = values.groupby("__group")["__metric"].agg(agg_name)
+        if grouped_values.empty:
+            return None
+        return float(grouped_values.max() if outer.group(1) in ("largest", "highest", "maximum", "max")
+                     else grouped_values.min())
+
     if re.search(r"\bhow many orders\b", o):
         order_col = _resolve_dico_column("order number", dfs, dico)
         if not order_col or order_col[0] != fact:
@@ -1517,6 +2265,18 @@ def table_join_rule(objective, dfs, dico):
         right = frames[dim].rename(columns={dim_key: "__join"})
         joined = left.merge(right, on="__join", how="inner")
         return float(joined["__order"].nunique()) if not joined.empty else 0.0
+
+    count_request = re.search(r"\bhow many\s+(.+?)\s+(?:belong to|whose)\b", o)
+    if count_request:
+        entity_tokens = _toks(count_request.group(1))
+        id_col = _identifier_column(fact, frames[fact].columns, dico)
+        id_desc = _table_descriptions(fact, frames[fact].columns, dico).get(id_col, "") if id_col else ""
+        if not id_col or not (entity_tokens & (_toks(fact) | _toks(id_desc))):
+            return None
+        left = frames[fact].rename(columns={fact_key: "__join", id_col: "__entity"})
+        right = frames[dim].rename(columns={dim_key: "__join"})
+        joined = left.merge(right, on="__join", how="inner")
+        return float(joined["__entity"].nunique(dropna=True)) if not joined.empty else 0.0
 
     op_m = re.search(r"\b(mean|average|median|maximum|minimum|max|min|sum|total)\b", o)
     if not op_m:
@@ -1535,7 +2295,11 @@ def table_join_rule(objective, dfs, dico):
     left = frames[fact].rename(columns={fact_key: "__join", metric[1]: "__metric"})
     right = frames[dim].rename(columns={dim_key: "__join"})
     joined = left.merge(right, on="__join", how="inner")
-    values = pd.to_numeric(joined["__metric"], errors="coerce").dropna()
+    descriptions = _table_descriptions(fact, frames[fact].columns, dico)
+    values = _numeric_metric(joined["__metric"], descriptions.get(metric[1], ""))
+    if values is None:
+        return None
+    values = values.dropna()
     if values.empty:
         return None
     if operation == "mean":
@@ -1589,7 +2353,8 @@ def fit_rules(objective, dfs, dico):
         return None
     items = [x.strip() for x in re.split(r",\s*|\s+and\s+", m.group(2)) if x.strip()]
     cands = [c for c in tr.columns if c in te.columns and c != idc and c not in excl and c != target
-             and c not in ycols and tr[c].dtype.kind in "fi"]
+             and c not in ycols and (tr[c].dtype.kind in "fiub" or
+                                    (tr[c].dtype.kind in "OUS" and tr[c].nunique(dropna=True) <= 20))]
     if not items or len(items) > len(cands):
         return None
     best, best_s = None, -1
@@ -1642,7 +2407,10 @@ def fit_rules(objective, dfs, dico):
         sc.sort(reverse=True)
         if not sc or sc[0][0] == 0 or (len(sc) > 1 and sc[0][0] == sc[1][0]):
             return None
-        return float(np.ravel(model.coef_)[feats.index(sc[0][1])])
+        coef_idx = getattr(model, "_dsh_numeric_coef_idx", {}).get(sc[0][1])
+        if coef_idx is None:
+            return None  # a categorical field has several one-hot coefficients, not one scalar slope
+        return float(np.ravel(model.coef_)[coef_idx])
     mn = re.search(r"How many [a-z ]+ of test\.csv have a predicted probability of [a-z ]+ of at least ([\d.]+)", o)
     if mn and kind == "logistic":
         t = te.dropna(subset=feats)
@@ -1807,7 +2575,7 @@ class Agent:
             code = extract_code(o)
             v = run_code(code, p["dfs"], min(EXEC_TIMEOUT, left()), p["obj"])
             if v is None:
-                p["fail"] = (code, LAST_ERR)
+                p["fail"] = (code, LAST_ERR, LAST_STATE)
                 if "```" not in o:
                     p["trunc"] = o              # sortie coupée avant la fin du bloc de code
             else:
@@ -1859,7 +2627,7 @@ class Agent:
                 return
             msgs = []
             for p in todo:
-                code, err = p["fail"]
+                code, err, state = p["fail"]
                 cols = "; ".join(f"{k}: {', '.join(map(str, d.columns))}" for k, d in p["dfs"].items())
                 extra = ""
                 # PATCH 5: Directives de self-repair enrichies
@@ -1871,11 +2639,12 @@ class Agent:
                     extra = " Ensure all parentheses and brackets are properly closed, and strings are terminated."
                 elif "AttributeError" in err and "round" in err:
                     extra = " Do not round the answer. Just return the raw float value."
-                    
+                data_state = f"\nDataFrame state after the failure:\n{state}" if state else ""
                 msgs.append(p["msgs"] + [
                     {"role": "assistant", "content": "```python\n" + code + "\n```"},
-                    {"role": "user", "content": f"That code failed: {err}\nAvailable columns -> {cols}.{extra}\n"
-                                                 "Write the corrected program (code only, `answer` must be a number)."}])
+                    {"role": "user", "content": f"That code failed: {err}\nAvailable columns -> {cols}.{extra}"
+                                                 f"{data_state}\nUse the observed dtypes, missing rates, and sample rows to fix the data logic (including joins/coercion), not only syntax.\n"
+                                                 "Write the corrected program (code only, `answer` must be a finite number)."}])
             try:
                 gens = self.generate(msgs, 1, 0.0, max_new=MAX_NEW, max_time=min(8.0, left() - 2))
             except Exception:
