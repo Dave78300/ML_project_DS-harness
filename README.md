@@ -7,11 +7,11 @@
 - **What it is:** an agent around Qwen2.5-Coder-1.5B. The system reads and cleans the files, solves the task families
   it recognises with deterministic rules, and sends everything else to the LLM, which writes Python that the system
   runs, repairs and votes on.
-- **Best private leaderboard result (reported):** **90.8 %** (109/120): no files 95.6 %, tables 84.0 %, fits 96.0 %.
-- **Progress on the private set:** 51.7 → 74.2 → 89.2 → 90.8 (versions v1 to v4, section 2).
+- **Best private leaderboard result (reported):** **92.5 %** (111/120): no files 95.6 %, tables 88.0 %, fits 96.0 %.
+- **Progress on the private set:** 51.7 → 74.2 → 89.2 → 90.8 → 92.5 (versions v1 to v5, section 2).
 - **How to read the numbers:** the public dev set is only a diagnostic. The deterministic rules were written from the
   dev objectives, so a perfect dev score is expected by construction. The private score is the measure that counts.
-  Eleven private tasks are still missed (8 tables, 2 no-files, 1 fit); task-level private errors are not available.
+  Nine private tasks are still missed (6 tables, 2 no-files, 1 fit); task-level private errors are not available.
 
 ## 1. Challenge and grading
 
@@ -27,8 +27,8 @@ number. The private evaluation contains 120 tasks:
 The score is the percentage of tasks answered within tolerance (`1.5 × 10⁻ⁿ` for n requested decimals). According to the
 course module, the project grade is split between the leaderboard (25 %) and the oral for both members (75 %). The
 leaderboard mark is the private-set score of the submission chosen by the team at the freeze. If the conversion is
-linear, 90.8 % contributes 4.54 of the leaderboard component's 5 points on the final /20 grade (to be confirmed with
-the course).
+linear, 92.5 % contributes 4.625 of the leaderboard component's 5 points on the final /20 grade (to be confirmed with
+the course); one task is worth about 0.04 points of the final grade.
 
 Runtime constraints: a model of about 1.5B parameters, 40 seconds per call of 8 tasks, 15 calls, 3 CPUs, 3 GiB of RAM,
 no network. A call that raises or exceeds its time limit fails the deployment.
@@ -36,7 +36,7 @@ no network. A call that raises or exceeds its time limit fails the deployment.
 ## 2. Results
 
 Version labels: **v1** first deployment, **v2** deployment with the fit rules and execution fixes (called "stage 3" in
-earlier notes), **v3** and **v4** later deployments with more deterministic rules. The file `stage3.py` is the current
+earlier notes), **v3** to **v5** later deployments with more deterministic rules. The file `stage3.py` is the current
 candidate; its name is unrelated to the earlier "stage 3" label.
 
 ### 2.1 Private leaderboard (reported by the team; aggregate scores only)
@@ -46,10 +46,12 @@ candidate; its name is unrelated to the earlier "stage 3" label.
 | v1, initial agent | 51.7 | 75.6 | 40.0 | 32.0 | 62/120 |
 | v2, fit rules and execution fixes | 74.2 | 77.8 | 60.0 | 96.0 | 89/120 |
 | v3 | 89.2 | 91.1 | 84.0 | 96.0 | 107/120 |
-| **v4, best reported** | **90.8** | **95.6** | **84.0** | **96.0** | **109/120** |
+| v4 | 90.8 | 95.6 | 84.0 | 96.0 | 109/120 |
+| **v5, best reported** | **92.5** | **95.6** | **88.0** | **96.0** | **111/120** |
 
-v4 corresponds to 43/45 no-file, 42/50 table and 24/25 fit tasks. One task is about 0.83 points of the total score, so
-the step from v3 to v4 is two tasks, both in the no-files family.
+v5 corresponds to 43/45 no-file, 44/50 table and 24/25 fit tasks. One task is about 0.83 points of the total score, so
+the step from v4 to v5 is two tasks, both in the tables family (42 → 44); the step from v3 to v4 was two tasks in the
+no-files family.
 
 For reference, the challenge's own reference systems score 46.1 (Qwen2.5-1.5B), 53.3 (Qwen2.5-Coder-1.5B) and 62.2
 (Qwen3-1.7B) on the public dev set (no files / tables / fits: 86.2/28.8/11.4, 81.5/47.5/14.3, 80.0/62.5/28.6). Those
@@ -131,7 +133,7 @@ the LLM path has not been measured.
 
 ## 5. Limits, risks and next steps
 
-- **Tables are the largest remaining loss:** 84 % privately (8 tasks missed). Keep unseen variants (for example
+- **Tables are the largest remaining loss:** 88 % privately (6 tasks missed). Keep unseen variants (for example
   `dev_ext.json`) as a holdout and compare versions task by task, not by family totals.
 - **No-file rules are pattern-based:** two private tasks are missed and the private errors cannot be inspected.
 - **Fits are near saturation** (96 % privately); differently worded objectives would fall back to the LLM.
