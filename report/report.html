@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project Report — DS-Harness</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm 15mm; }
+  :root { --blue: #1d4ed8; --ink: #111827; --muted: #4b5563; --line: #e5e7eb; --soft: #f3f6fb; --green: #16a34a; --amber: #b45309; }
+  * { box-sizing: border-box; }
+  body { font-family: "Inter", "DejaVu Sans", sans-serif; color: var(--ink); font-size: 9.5pt; line-height: 1.45; margin: 0; }
+  .head { border: 1px solid var(--line); border-left: 5px solid var(--blue); border-radius: 8px; padding: 14px 18px; background: #fbfcfe; }
+  .head h1 { margin: 0; font-size: 16.5pt; color: #0f2c6b; letter-spacing: -0.2px; }
+  .head .sub { color: var(--muted); margin-top: 3px; font-size: 9.6pt; }
+  .chips { margin-top: 9px; }
+  .chip { display: inline-block; background: #e8efff; color: var(--blue); border-radius: 4px; padding: 2px 8px; font-size: 8.4pt; font-weight: 600; margin-right: 6px; }
+  .kpis { display: flex; gap: 10px; margin: 14px 0 6px; }
+  .kpi { flex: 1; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); text-align: center; padding: 10px 6px; }
+  .kpi b { display: block; font-size: 18pt; color: #0f2c6b; }
+  .kpi span { font-size: 7.6pt; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h2 { font-size: 12pt; color: #0f2c6b; border-bottom: 1.5px solid var(--blue); padding-bottom: 3px; margin: 14px 0 7px; break-after: avoid; }
+  p { margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 6px; font-size: 8.8pt; break-inside: avoid; }
+  th { background: #eef3fb; color: #1e3a8a; text-align: left; font-weight: 600; padding: 5px 7px; }
+  td { padding: 3.5px 7px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  tr.best td { font-weight: 700; color: #0f2c6b; background: #f5f8ff; }
+  .box { border: 1px solid #d1fae5; border-left: 4px solid var(--green); background: #f0fdf4; border-radius: 6px; padding: 9px 12px; margin: 10px 0; break-inside: avoid; }
+  .box.warn { border-color: #fde68a; border-left-color: var(--amber); background: #fffbeb; }
+  .box b.t { display: block; color: #14532d; margin-bottom: 2px; }
+  .box.warn b.t { color: #78350f; }
+  ul { break-inside: auto; margin: 6px 0 6px 18px; padding: 0; }
+  li { margin: 3px 0; break-inside: avoid; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.4pt; background: #f3f4f6; padding: 0 3px; border-radius: 3px; }
+  .flow { display: flex; align-items: stretch; gap: 6px; margin: 10px 0; break-inside: avoid; }
+  .step { flex: 1; border: 1px solid #c7d6f5; border-radius: 7px; background: #f6f9ff; padding: 7px 6px; text-align: center; font-size: 7.8pt; }
+  .step b { display: block; color: var(--blue); font-size: 8.2pt; margin-bottom: 2px; }
+  .arrow { align-self: center; color: var(--blue); font-weight: 700; }
+  .page-break { break-before: page; }
+  .small { font-size: 8.6pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>DS-Harness: A Rule-First Agent with an LLM Fallback</h1>
+  <div class="sub">Technical Project Report &amp; System Architecture — ML-Arena Challenge 194 · updated 6 November 2026</div>
+  <div class="chips">
+    <span class="chip">Freeze: 2026-11-03</span><span class="chip">Oral: 2026-11-04</span>
+    <span class="chip">Private Score: 97.5 % (v10)</span><span class="chip">At the freeze: 92.5 % (v5)</span>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><b>97.5 %</b><span>Private leaderboard</span></div>
+  <div class="kpi"><b>117 / 120</b><span>Tasks solved</span></div>
+  <div class="kpi"><b>180 / 180</b><span>Dev tasks solved by rules</span></div>
+  <div class="kpi"><b>40 s</b><span>Batch limit (8 tasks)</span></div>
+</div>
+
+<h2>1. Challenge Overview &amp; Task Objectives</h2>
+<p>The ML-Arena Challenge 194 requires building an autonomous data science agent capable of answering diverse quantitative
+tasks. Each task consists of an English objective, optionally accompanied by CSV data files and a data dictionary. The
+required output is a single number, evaluated within a tolerance of 1.5 × 10<sup>−n</sup> for n requested decimal places.</p>
+
+<h2>2. Task Taxonomy &amp; Execution Constraints</h2>
+<p>The private evaluation set consists of 120 unseen tasks. The system runs under strict constraints: a local model of about
+1.5 billion parameters (Qwen2.5-Coder-1.5B), no internet access, 3 vCPUs, 3 GiB of RAM, and 40 seconds per call of 8 tasks.</p>
+<table>
+  <tr><th>Task Family</th><th>Content &amp; Functional Scope</th><th class="n">Tasks</th><th class="n">Share</th><th class="n">v10 private</th></tr>
+  <tr><td><b>No files</b></td><td>Arithmetic, percentages, growth, dates, logarithms and roots, integers, probability, word problems</td><td class="n">45</td><td class="n">37.5 %</td><td class="n">44 / 45</td></tr>
+  <tr><td><b>Tables</b></td><td>Statistics, filters, group rankings, joins, derived columns, and types absent from dev</td><td class="n">50</td><td class="n">41.7 %</td><td class="n">48 / 50</td></tr>
+  <tr><td><b>Fits</b></td><td>Linear or logistic regression on <code>train.csv</code></td><td class="n">25</td><td class="n">20.8 %</td><td class="n">25 / 25</td></tr>
+</table>
+<div class="box"><b class="t">System Design Strategy</b>
+Deterministic rules answer every recognised template in milliseconds; on the public dev set they answer all 180 tasks without
+calling the model. The GPU budget is therefore kept for the tasks no rule recognises, where the LLM gets parser hints and a
+larger vote.</div>
+
+<h2>3. Overall System Architecture</h2>
+<p>DS-Harness is a two-tier design: high-precision rule solvers first, backed by an LLM code-generation pipeline with error
+recovery, answer checks and voting.</p>
+<div class="flow">
+  <div class="step"><b>1. Router</b>No files / fit / table</div><div class="arrow">➔</div>
+  <div class="step"><b>2. Ingestion</b>Cleaning, units, dates, keys, thousands separators</div><div class="arrow">➔</div>
+  <div class="step"><b>3. Rule engine</b>Narrow templates, veto, two cross-checked rule sets</div><div class="arrow">➔</div>
+  <div class="step"><b>4. LLM fallback</b>Qwen code generator with parser hints</div><div class="arrow">➔</div>
+  <div class="step"><b>5. Repair, checks &amp; vote</b>Error repair, answer checks, weighted vote, rounding</div>
+</div>
+
+<h2>4. Deterministic Rule Engine (Rule-First Strategy)</h2>
+<p>The rules exploit the regularity of the task generator. A rule answers only when the whole question matches its template;
+otherwise it abstains and the task goes to the LLM.</p>
+<ul>
+  <li><b>Fits (25/25 private):</b> target = the <code>train.csv</code> column missing from <code>test.csv</code>; features matched
+  to the dictionary; year filters; unregularised linear or logistic regression; predictions, intercepts, coefficients, odds
+  ratios, R², counts and mean predictions.</li>
+  <li><b>Tables (48/50 private):</b> narrow templates for types absent from dev (share of a total, days between dates, gaps
+  between groups, top-k, mode, interquartile range, weekday and quarter filters, date ranges, negations, <code>A or B</code>,
+  per-group spread and distinct counts, weighted means, year-over-year change); the original v5 rules for statistics,
+  filters, groups, joins and derived columns; a corrected rule set that cross-checks them.</li>
+  <li><b>No files (44/45 private):</b> the v5 templates plus about 130 further templates in three waves (dates and times,
+  logarithms and powers, compound, simple, monthly and continuous interest, half-life, divisors, primes, binomial and
+  hypergeometric probability, variance, mode, unit and temperature conversions, mixtures…).</li>
+</ul>
+<div class="box"><b class="t">Two rule sets, cross-checked (v10)</b>
+The v5 table rules are kept verbatim. A second, corrected implementation runs on the same task; when both answer and
+disagree, the corrected answer is kept. On generated tasks the corrected rules were right in 41 of 41 disagreements; on the
+private set this step added two table tasks (46 → 48).</div>
+<div class="box warn"><b class="t">Wrong rules are worse than abstentions</b>
+On generated tasks of types absent from dev, the v5 rules answered 50 of 420 tasks wrongly instead of abstaining (an
+interquartile range computed as max − min, "number of distinct carriers per depot" counted as rows, "not of the Lyon store"
+read as "of the Lyon store"). A wrong rule hides the task from the LLM. v10 vetoes these constructs and solves them with
+dedicated templates.</div>
+
+<h2>5. LLM Fallback &amp; Self-Correction Pipeline</h2>
+<p>For tasks outside the rule scope, Qwen2.5-Coder-1.5B writes executable Python:</p>
+<ul>
+  <li><b>Compact prompting:</b> cleaned table schemas, dictionary, instructions and one worked example.</li>
+  <li><b>Parser hints (v9):</b> what the parser understood even when no rule answered — the resolved column of the measure,
+  the grouping column, the filters, and, for proportions, the population and the counted rows kept apart.</li>
+  <li><b>SmartFrame and repair:</b> column-name mismatches are recovered at run time; failed code is sent back with its
+  error message; truncated code is continued.</li>
+  <li><b>Answer checks (v8):</b> candidates that break the form the question asks for (a fraction or probability outside
+  [0, 1], a non-integer count, an invalid date, a rank below 1) are discarded before the vote. None of the true answers of
+  9,811 tasks is rejected.</li>
+  <li><b>Weighted vote:</b> greedy result weight 1.5, each sample weight 1; 8 samples instead of 4 when four tasks or fewer of
+  a batch reach the model (v9); internal budget of 29 s, every generation bounded by <code>max_time</code>.</li>
+</ul>
+
+<h2>6. Post-Mortem &amp; Engineering Fixes</h2>
+<table>
+  <tr><th>Identified Vulnerability</th><th>System Impact</th><th>Engineered Fix</th></tr>
+  <tr><td>LLM re-imported pandas, resetting <code>read_csv</code></td><td>Table tasks failed silently</td><td>Patched <code>pd.read_csv</code> persistently across re-imports</td></tr>
+  <tr><td>scikit-learn estimators rejected missing values</td><td>Fit tasks crashed on NaN rows</td><td>NaN-tolerant regression wrappers</td></tr>
+  <tr><td>Inconsistent join keys (case, prefixes, leading zeros)</td><td>Join accuracy at 0 %</td><td>Automatic key detection and normalisation</td></tr>
+  <tr><td>Default L2 regularisation in logistic regression</td><td>Probabilities outside tolerance</td><td>Unregularised fits</td></tr>
+  <tr><td>Unbounded code generation</td><td>Deployment failed on deadline</td><td><code>max_time</code> and a watched thread</td></tr>
+  <tr><td>Field names containing "of" (<code>length of stay</code>) cut to "stay"</td><td>Filter silently dropped</td><td>Candidate phrases tried nearest first, within the sentence</td></tr>
+  <tr><td>Apostrophe in "company's" read as a quote; sentinel sentence matched across sentences</td><td>Filters and <code>-1</code> sentinels lost</td><td>Word-bounded quotes, sentence-bounded patterns</td></tr>
+  <tr><td><code>no less than 5</code> read as <code>&lt; 5</code>; synonyms (<code>more than</code>, <code>under</code>…) ignored</td><td>Wrong filters</td><td>Explicit operator table</td></tr>
+  <tr><td>Thousands separators (<code>24,000</code>, <code>1 tonne = 1,000 kg</code>)</td><td>Numbers truncated</td><td>Normalised before parsing</td></tr>
+  <tr><td>"How much interest has been earned" answered with the balance</td><td>Wrong no-file answers</td><td>Interest-only questions handled</td></tr>
+</table>
+
+<h2>7. Experimental Progression &amp; Leaderboard Results</h2>
+<table>
+  <tr><th>Version</th><th>Key change</th><th class="n">No Files</th><th class="n">Tables</th><th class="n">Fits</th><th class="n">Private Score</th></tr>
+  <tr><td>v1</td><td>Initial agent without rule engine</td><td class="n">75.6 %</td><td class="n">40.0 %</td><td class="n">32.0 %</td><td class="n">51.7 % (62/120)</td></tr>
+  <tr><td>v2</td><td>Fit rules + execution recovery fixes</td><td class="n">77.8 %</td><td class="n">60.0 %</td><td class="n">96.0 %</td><td class="n">74.2 % (89/120)</td></tr>
+  <tr><td>v3</td><td>Expanded table and arithmetic rules</td><td class="n">91.1 %</td><td class="n">84.0 %</td><td class="n">96.0 %</td><td class="n">89.2 % (107/120)</td></tr>
+  <tr><td>v4</td><td>Enhanced no-file rule templates</td><td class="n">95.6 %</td><td class="n">84.0 %</td><td class="n">96.0 %</td><td class="n">90.8 % (109/120)</td></tr>
+  <tr><td>v5 (freeze)</td><td>Final rule optimisations (<code>stage3.py</code>)</td><td class="n">95.6 %</td><td class="n">88.0 %</td><td class="n">96.0 %</td><td class="n">92.5 % (111/120)</td></tr>
+  <tr><td>v6</td><td>v5 table path + reworked no-file and fit rules</td><td class="n">97.8 %</td><td class="n">86.0 %</td><td class="n">100 %</td><td class="n">93.3 % (112/120)</td></tr>
+  <tr><td>v7</td><td>+ 21 narrow table templates and veto</td><td class="n">97.8 %</td><td class="n">88.0 %</td><td class="n">100 %</td><td class="n">94.2 % (113/120)</td></tr>
+  <tr><td>v8</td><td>+ no-file template waves, thousands separators, answer checks</td><td class="n">97.8 %</td><td class="n">88.0 %</td><td class="n">100 %</td><td class="n">94.2 % (113/120)</td></tr>
+  <tr><td>v9</td><td>+ parser hints in table prompts, 8 samples</td><td class="n">97.8 %</td><td class="n">92.0 %</td><td class="n">100 %</td><td class="n">95.8 % (115/120)</td></tr>
+  <tr class="best"><td>v10 (best)</td><td>+ corrected table rules win on disagreement (<code>agent_v10.py</code>)</td><td class="n">97.8 %</td><td class="n">96.0 %</td><td class="n">100 %</td><td class="n">97.5 % (117/120)</td></tr>
+</table>
+<p class="small">v6–v10 were submitted on 5–6 November 2026, after the freeze date. Each version changes one thing; one private
+task is worth 0.83 points, and the LLM path alone moves the score by about one task between submissions.</p>
+<table>
+  <tr><th>Experiment that did not help</th><th class="n">Private Score</th><th>Reading</th></tr>
+  <tr><td>Vote weighted by use of the columns found by the parser</td><td class="n">95.8 %</td><td>No effect</td></tr>
+  <tr><td>12 samples and a second round on split votes</td><td class="n">95.8 %</td><td>No effect</td></tr>
+  <tr><td>Hints for no-file tasks sent to the LLM</td><td class="n">95.8 %</td><td>No effect</td></tr>
+  <tr><td>LLM arbitrates between the two table rule sets</td><td class="n">96.7 %</td><td>One table recovered instead of two</td></tr>
+  <tr><td>Corrected rules also where the v5 rules abstain</td><td class="n">93.3 %</td><td>Tables 86 %: generic rules misfire on private phrasings</td></tr>
+</table>
+
+<h2>8. Testing Methodology</h2>
+<p>The dev set was used to write the rules, so it cannot measure generalisation. Changes were therefore tested on data built
+for that purpose, and the LLM path, which could not be run offline, was measured only through the private score.</p>
+<ul>
+  <li><b>Generators with ground truth:</b> the seven table domains, the five fit domains and the nine no-file categories are
+  rebuilt with dev's formatting traps (separators, decimal commas, missing-value tokens, units in cells, <code>-1</code>
+  sentinels, duplicates, day-first dates, key prefixes). The truth is computed on the clean data, independently of the agent.</li>
+  <li><b>Paraphrases of dev:</b> real dev objectives rewritten without changing their meaning (operator synonyms, filler
+  sentences, sentence order, rounding phrases, "Find" instead of "What is").</li>
+  <li><b>Strict non-regression:</b> every version is compared task by task with the previous one, with a stub LLM, on answers
+  and on the exact prompts sent to the model.</li>
+</ul>
+<table>
+  <tr><th>Check</th><th>Result</th></tr>
+  <tr><td>Dev, full <code>solve()</code> with a stub LLM</td><td>180/180, no LLM call, ≤ 1.5 s per batch of 8</td></tr>
+  <tr><td>Generated tables (dev-like and new types, fresh draws)</td><td>1,548/1,550 correct, 0 wrong; new types 420/420 on two draws</td></tr>
+  <tr><td>Generated no-file tasks (three waves, thousands separators)</td><td>100 % on every set, 0 wrong</td></tr>
+  <tr><td>Paraphrased dev objectives</td><td>Tables 765/775, no files 542/542, fits 244/244 (v5 rules: 734, 216, 240)</td></tr>
+  <tr><td>Answer checks on true answers</td><td>0 rejected among 9,811 tasks</td></tr>
+</table>
+<p class="small">A Good-Turing estimate on dev's no-file sub-templates suggests that about a third of the private no-file tasks
+come from sub-templates dev does not contain, which is why the template waves cover many forms.</p>
+
+<h2>9. Failure Analysis &amp; Lessons</h2>
+<p>Three of 120 private tasks are still missed: two tables and one no-file task. Their scores did not move with any change
+of the LLM path, so they are most likely decided by rules; task-level private errors are not available.</p>
+<ul>
+  <li><b>Stable scores are a diagnosis.</b> Five LLM-side variants gave exactly the same family scores, which pointed to
+  deterministic errors; cross-checking two rule implementations then recovered two tasks.</li>
+  <li><b>Generated data is a safety net, not the arbiter.</b> Extending the corrected rules to tasks the v5 rules abstain on
+  looked better on generated data but cost five private tasks: the LLM with hints handles unseen phrasings better than
+  generic rules.</li>
+  <li><b>Leaderboard selection.</b> v6–v10 were chosen among about a dozen submissions on the same private set. Each was a
+  single explained hypothesis, but the final score also reflects that selection.</li>
+  <li><b>Next step.</b> Measure the LLM path offline with the rules switched off (<code>DSH_RULES_OFF</code>) on a GPU, then
+  target the forms where the model fails.</li>
+</ul>
+</body>
+</html>
