@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>DS-Harness Oral Presentation</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  :root {
+    --ink: #0f172a; --ink2: #334155; --mute: #64748b; --line: #e2e8f0; --bg: #f8fafc; --card: #ffffff;
+    --blue: #2563eb; --teal: #0d9488; --amber: #d97706; --red: #dc2626; --green: #16a34a; --violet: #7c3aed;
+    --dark: #0b1120; --dark2: #111a2e; --dline: #22304a;
+    --mono: "DejaVu Sans Mono", "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); }
+  body { font-family: Inter, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .slide { width: 1280px; height: 720px; position: relative; overflow: hidden; padding: 56px 64px 48px;
+           background: var(--bg); page-break-after: always; display: flex; flex-direction: column; }
+  .slide:last-child { page-break-after: auto; }
+  .tag { font-family: var(--mono); font-size: 12.5px; color: var(--blue); letter-spacing: .02em; font-weight: 700; }
+  h1 { font-size: 36px; font-weight: 700; letter-spacing: -.02em; margin-top: 10px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-end; }
+  .chip { font-family: var(--mono); font-size: 12px; color: var(--mute); background: #eef2f7; border: 1px solid var(--line);
+          padding: 5px 10px; border-radius: 4px; }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .card { background: var(--card); border: 1.5px solid var(--ink); border-radius: 8px; padding: 20px 22px;
+          box-shadow: 4px 4px 0 var(--ink); }
+  .soft { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+  .lbl { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+  .ttl { font-size: 18px; font-weight: 700; margin: 8px 0 6px; }
+  .txt { font-size: 15px; color: var(--ink2); line-height: 1.45; }
+  .small { font-size: 13.5px; color: var(--ink2); line-height: 1.45; }
+  ul.b { list-style: none; } ul.b li { position: relative; padding-left: 14px; margin: 7px 0; font-size: 15px; line-height: 1.4; }
+  ul.b li::before { content: "•"; position: absolute; left: 0; }
+  code, .m { font-family: var(--mono); font-size: .9em; }
+  .badge { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 3px 7px; border-radius: 3px; color: #fff; }
+  .red { color: var(--red); } .blue { color: var(--blue); } .teal { color: var(--teal); } .amber { color: var(--amber); }
+  .green { color: var(--green); } .violet { color: var(--violet); }
+  .box-red { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 10px; padding: 22px 24px; color: #7f1d1d; }
+  .box-green { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 22px 24px; color: #14532d; }
+  .box-yellow { background: #fefce8; border: 1.5px solid #fde68a; border-radius: 10px; padding: 22px 24px; color: #713f12; }
+  .box-blue { background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 10px; padding: 18px 22px; color: #1e3a8a; }
+  .foot { position: absolute; bottom: 18px; left: 64px; right: 64px; display: flex; justify-content: space-between;
+          font-family: var(--mono); font-size: 10.5px; color: #94a3b8; }
+  /* dark */
+  .dark { background: var(--dark); color: #e2e8f0; }
+  .dark .foot { color: #475569; }
+  .pill { display: inline-block; font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: #60a5fa;
+          background: #13213d; border: 1px solid #1e3a8a; padding: 6px 12px; border-radius: 4px; }
+  .kpi { background: var(--dark2); border: 1px solid var(--dline); border-radius: 6px; padding: 16px 20px; }
+  .kpi .lbl { color: #64748b; } .kpi .v { font-size: 26px; font-weight: 600; color: #f1f5f9; margin-top: 8px; }
+  .kpi .v small { font-size: 14px; color: #64748b; font-weight: 400; }
+  /* pipeline */
+  .pipe { display: flex; align-items: center; gap: 10px; }
+  .step { flex: 1; background: #fff; border: 1.5px solid var(--ink); border-radius: 6px; padding: 14px 10px; text-align: center; min-height: 96px;
+          display: flex; flex-direction: column; justify-content: center; }
+  .step .lbl { font-size: 10px; } .step .n { font-size: 15.5px; font-weight: 700; margin: 6px 0 4px; } .step .s { font-size: 11.5px; color: var(--mute); line-height: 1.35; }
+  .step.hl { border-color: var(--blue); background: #eff6ff; box-shadow: 3px 3px 0 var(--blue); }
+  .arrow { color: var(--ink); font-size: 18px; font-weight: 700; }
+  /* tables */
+  table.t { width: 100%; border-collapse: collapse; }
+  table.t th { font-family: var(--mono); font-size: 11.5px; text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--ink); text-transform: uppercase; }
+  table.t td { padding: 7px 10px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--ink2); }
+  table.t td.v { font-family: var(--mono); color: var(--ink); white-space: nowrap; }
+  table.t td.r, table.t th.r { text-align: right; font-family: var(--mono); }
+  table.t tr.hl td { background: #eff6ff; color: var(--blue); font-weight: 600; }
+  table.t tr.sep td { padding: 3px 10px; background: #f1f5f9; font-family: var(--mono); font-size: 10.5px; color: var(--mute); letter-spacing: .04em; }
+  .big { font-size: 96px; font-weight: 700; letter-spacing: -.04em; line-height: 1; }
+  .fam .pct { font-size: 64px; font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+  .delta { font-family: var(--mono); font-size: 13px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<!-- 1. TITRE -->
+<section class="slide dark">
+  <div><span class="pill">// ML-ARENA_CHALLENGE_194</span> <span class="m" style="color:#64748b;font-size:12.5px;margin-left:10px">SYS.ORAL_2026-11-04</span></div>
+  <h1 style="font-size:56px;line-height:1.08;margin-top:40px;color:#f8fafc;max-width:1000px">DS-Harness : Agent Rule-First avec Fallback LLM</h1>
+  <p style="font-size:21px;color:#94a3b8;margin-top:24px;max-width:860px;line-height:1.45">Résolution déterministe ciblée, règles croisées &amp; génération Python supervisée sur Qwen2.5-Coder-1.5B</p>
+  <div style="flex:1"></div>
+  <div style="border-top:1px solid var(--dline);padding-top:26px" class="grid4">
+    <div class="kpi" style="border-color:#1e3a8a;background:#0f1d3a"><div class="lbl" style="color:#60a5fa">Score private · v10</div><div class="v" style="color:#fff">97.5 % <small>(117/120)</small></div></div>
+    <div class="kpi"><div class="lbl">Au freeze · v5</div><div class="v">92.5 % <small>(111/120)</small></div></div>
+    <div class="kpi"><div class="lbl">Freeze date</div><div class="v">2026-11-03</div></div>
+    <div class="kpi"><div class="lbl">Évaluation oral</div><div class="v">2026-11-04</div></div>
+  </div>
+  <div class="foot"><span>DS-HARNESS // agent/agent_v10.py</span><span>01 / 15</span></div>
+</section>
+
+<!-- 2. EXIGENCES -->
+<section class="slide">
+  <div class="head"><div><div class="tag">[ SYS.01 // CADRE &amp; CONTRAINTES ]</div><h1>Exigences du Challenge ML-Arena</h1></div><span class="chip">120 TASKS PRIVATE</span></div>
+  <div class="body">
+    <div class="grid2" style="gap:22px">
+      <div class="card"><div class="lbl blue">OBJ.01</div><div class="ttl">Réponse numérique unique</div><div class="txt">Métrique stricte avec tolérance décimale (1.5 × 10<sup>−n</sup>) pour n décimales demandées.</div></div>
+      <div class="card"><div class="lbl teal">OBJ.02</div><div class="ttl">Modèle embarqué local</div><div class="txt">Modèle de ~1.5B paramètres (Qwen2.5-Coder) chargé via <code>dsh.load_llm</code>, zéro réseau.</div></div>
+      <div class="card"><div class="lbl amber">OBJ.03</div><div class="ttl">Budget temps strict</div><div class="txt">40 s par lot de 8 tâches (5 s par problème), 15 appels. Un dépassement fait échouer le déploiement.</div></div>
+      <div class="card"><div class="lbl red">OBJ.04</div><div class="ttl">Isolation matérielle</div><div class="txt">3 vCPUs et 3 GiB de RAM, sans GPU ni possibilité de dépassement.</div></div>
+    </div>
+    <div class="grid3" style="margin-top:26px">
+      <div class="soft"><span class="lbl blue">No files · 45</span><div class="small" style="margin-top:6px">Arithmétique, pourcentages, croissance, dates, probabilités, problèmes</div></div>
+      <div class="soft"><span class="lbl teal">Tables · 50</span><div class="small" style="margin-top:6px">Statistiques, filtres, classements de groupes, jointures, colonnes dérivées</div></div>
+      <div class="soft"><span class="lbl amber">Fits · 25</span><div class="small" style="margin-top:6px">Régression linéaire ou logistique sur <code>train.csv</code></div></div>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>02 / 15</span></div>
+</section>
+
+<!-- 3. RULE-FIRST -->
+<section class="slide">
+  <div class="tag">[ SYS.02 // RATIONALE DE DESIGN ]</div><h1>Pourquoi la Stratégie Rule-First ?</h1>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1fr 70px 1fr;align-items:center">
+      <div class="box-red"><div><span class="badge" style="background:var(--red)">LIMITES</span> <b style="font-size:19px;margin-left:6px;color:#b91c1c">Problèmes du pur-LLM 1.5B</b></div>
+        <ul class="b" style="margin-top:12px"><li>Hallucinations fréquentes sur les calculs exacts</li><li>Erreurs de syntaxe Python sous pression</li><li>Latence élevée sur CPU, budget de 5 s par tâche</li><li>Référence du challenge : 53.3 % sur le dev</li></ul></div>
+      <div style="text-align:center"><div class="lbl" style="color:var(--mute);font-size:10px">VERSUS</div><div style="font-size:26px;font-weight:700">→</div></div>
+      <div class="box-green"><div><span class="badge" style="background:var(--green)">AVANTAGES</span> <b style="font-size:19px;margin-left:6px;color:#15803d">Atouts de DS-Harness</b></div>
+        <ul class="b" style="margin-top:12px"><li>Réponse exacte dès qu'un gabarit est reconnu</li><li>Exécution instantanée (&lt; 1 ms par règle)</li><li>Budget temps préservé pour les cas ouverts</li><li><b>Une règle s'abstient si elle n'est pas sûre</b></li></ul></div>
+    </div>
+    <div class="box-blue" style="margin-top:28px;text-align:center;font-size:16px"><b>Leçon de v10 :</b> une règle fausse est pire qu'une abstention. Le LLM rattrape une abstention, jamais une règle qui se trompe.</div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>03 / 15</span></div>
+</section>
+
+<!-- 4. ARCHITECTURE -->
+<section class="slide">
+  <div class="tag">[ SYS.03 // FLUX DE TRAITEMENT ]</div><h1>Architecture globale du pipeline</h1>
+  <div class="body">
+    <div class="pipe">
+      <div class="step"><div class="lbl blue">01. Router</div><div class="n">Acheminement</div><div class="s">No-file, Fit, Table</div></div><span class="arrow">›</span>
+      <div class="step"><div class="lbl teal">02. Cleaning</div><div class="n">Nettoyage</div><div class="s">Séparateurs, milliers, sentinelles, unités</div></div><span class="arrow">›</span>
+      <div class="step hl"><div class="lbl blue">03. Rules first</div><div class="n blue">Moteur métier</div><div class="s" style="color:var(--blue)">Gabarits stricts, veto, croisement</div></div><span class="arrow">›</span>
+      <div class="step"><div class="lbl violet">04. LLM fallback</div><div class="n">Génération</div><div class="s">Qwen2.5-Coder + indices</div></div><span class="arrow">›</span>
+      <div class="step"><div class="lbl red">05. Checks</div><div class="n">Contrôle de forme</div><div class="s">Candidats LLM seulement</div></div><span class="arrow">›</span>
+      <div class="step"><div class="lbl amber">06. Repair &amp; vote</div><div class="n">Validation</div><div class="s">Réparation, vote pondéré</div></div>
+    </div>
+    <div style="margin-top:34px" class="lbl" >Chemin des tables dans v10</div>
+    <div class="grid4" style="grid-template-columns:repeat(5,1fr);gap:12px;margin-top:12px">
+      <div class="soft"><div class="lbl teal">1 · Gabarits étroits</div><div class="small" style="margin-top:6px">21 types absents du dev : IQR, top-k, mode, négations, A ou B…</div></div>
+      <div class="soft"><div class="lbl red">2 · Veto</div><div class="small" style="margin-top:6px">Constructions mal lues par les règles v5 → directement au LLM</div></div>
+      <div class="soft"><div class="lbl blue">3 · Règles v5</div><div class="small" style="margin-top:6px">Code de <code>stage3.py</code> conservé à l'identique (préfixe <code>_v1_</code>)</div></div>
+      <div class="soft" style="border-color:#93c5fd;background:#eff6ff"><div class="lbl blue">4 · Croisement</div><div class="small" style="margin-top:6px">Désaccord avec les règles corrigées → la réponse corrigée gagne</div></div>
+      <div class="soft"><div class="lbl violet">5 · LLM</div><div class="small" style="margin-top:6px">Prompts v5 + indices du parseur, 8 échantillons si ≤ 4 tâches</div></div>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>04 / 15</span></div>
+</section>
+
+<!-- 5. PÉRIMÈTRE -->
+<section class="slide">
+  <div class="tag">[ SYS.04 // MOTEUR DÉTERMINISTE ]</div><h1>Périmètre d'Action des Règles</h1>
+  <div class="body">
+    <div class="grid3">
+      <div class="card" style="border-top:5px solid var(--blue)"><div class="lbl blue">Famille 01 · 25/25 privé</div><div class="ttl">Fits (20.8 %)</div>
+        <div class="txt">Cible = colonne de <code>train.csv</code> absente de <code>test.csv</code>. Régression linéaire ou logistique sans régularisation, tolérante aux NaN. Prédiction, R², coefficient, odds ratio, moyenne prédite, comptages.</div></div>
+      <div class="card" style="border-top:5px solid var(--teal)"><div class="lbl teal">Famille 02 · 48/50 privé</div><div class="ttl">Tables (41.7 %)</div>
+        <div class="txt">Jointures avec clés normalisées, filtres de dates et d'opérateurs, agrégats par groupe. 21 gabarits étroits ajoutés et deux jeux de règles indépendants croisés.</div></div>
+      <div class="card" style="border-top:5px solid var(--amber)"><div class="lbl amber">Famille 03 · 44/45 privé</div><div class="ttl">No-files (37.5 %)</div>
+        <div class="txt">PPCM, logarithmes, systèmes linéaires, probabilités, intérêts composés, dates. Environ 130 gabarits ajoutés en trois vagues, chacun strict : il ne répond que si toute la question correspond.</div></div>
+    </div>
+    <div class="box-blue" style="margin-top:26px;font-size:15px">Les règles répondent seules aux 180 tâches du dev public, sans appel au LLM. Ce score est attendu par construction : le privé reste la seule mesure.</div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>05 / 15</span></div>
+</section>
+
+<!-- 6. RÈGLES CROISÉES -->
+<section class="slide">
+  <div class="tag">[ SYS.05 // RÈGLES CROISÉES — NOUVEAU v10 ]</div><h1>Deux jeux de règles, une réponse</h1>
+  <div class="body">
+    <div class="grid2" style="grid-template-columns:1.05fr 1fr;gap:26px">
+      <div>
+        <div class="card"><div class="lbl red">Diagnostic</div><div class="ttl">Les règles v5 se trompent parfois sans le savoir</div>
+          <table class="t" style="margin-top:6px">
+            <tr><td>Variantes proches du dev</td><td class="r" style="color:var(--red)">11 / 500 faux</td></tr>
+            <tr><td>Types absents du dev</td><td class="r" style="color:var(--red)">50 / 420 faux</td></tr>
+          </table>
+          <ul class="b small" style="margin-top:10px"><li>Écart interquartile calculé comme une étendue</li><li>« distinct carriers per depot » compté en lignes</li><li>« not of the Lyon store » lu « of the Lyon store »</li></ul>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="soft" style="border-left:4px solid var(--blue)"><div class="lbl blue">Règle de décision</div><div class="txt" style="margin-top:6px">Les deux implémentations répondent et divergent → <b>la règle corrigée l'emporte</b>. Sinon la réponse v5 est conservée telle quelle.</div></div>
+        <div class="soft" style="border-left:4px solid var(--violet)"><div class="lbl violet">Limite volontaire</div><div class="txt" style="margin-top:6px">Quand v5 s'abstient, la tâche va au LLM avec indices, pas aux règles génériques : les étendre partout a coûté 5 tables au privé (86 %).</div></div>
+        <div class="soft" style="border-left:4px solid var(--green);background:#f0fdf4"><div class="lbl green">Résultat privé</div><div style="font-size:30px;font-weight:700;margin-top:4px">Tables 92 % → 96 %</div><div class="small">+2 tâches, score global 95.8 % → 97.5 %</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>06 / 15</span></div>
+</section>
+
+<!-- 7. SUPERVISION LLM -->
+<section class="slide">
+  <div class="tag">[ SYS.06 // FALLBACK &amp; AUTOCORRECTION ]</div><h1>Supervision du LLM Qwen2.5-Coder</h1>
+  <div class="body">
+    <div class="grid3">
+      <div class="card"><div><span class="badge" style="background:var(--blue)">PROMPTING</span></div><div class="ttl">Contexte réduit + indices</div>
+        <ul class="b small"><li>Modèle <code>Qwen2.5-Coder-1.5B</code></li><li>Schéma exact, dictionnaire, un exemple guidé</li><li><b>Indices du parseur</b> : colonnes résolues, population et lignes comptées d'une proportion, filtres</li></ul></div>
+      <div class="card"><div><span class="badge" style="background:var(--amber)">EXÉCUTION</span></div><div class="ttl">Boucle auto-correctrice</div>
+        <ul class="b small"><li>Thread surveillé, <code>max_time</code> sur chaque génération</li><li>Réparation à partir du traceback</li><li>Vote pondéré : glouton 1.5, échantillon 1.0</li><li><b>8 échantillons</b> quand ≤ 4 tâches du lot restent ouvertes</li></ul></div>
+      <div class="card"><div><span class="badge" style="background:var(--red)">CONTRÔLES</span></div><div class="ttl">Forme de la réponse</div>
+        <ul class="b small"><li>Fraction, probabilité dans [0, 1]</li><li>Comptage entier, rang ≥ 1, jour 1–7</li><li>Date YYYYMMDD valide, dispersion ≥ 0</li><li>Jamais appliqué aux réponses des règles</li></ul></div>
+    </div>
+    <div class="grid2" style="margin-top:24px">
+      <div class="soft"><span class="lbl">Effet mesuré au privé</span><div class="txt" style="margin-top:4px">Indices + 8 échantillons : tables 88 % → 92 % (94.2 → 95.8 %)</div></div>
+      <div class="soft"><span class="lbl">Sécurité des contrôles</span><div class="txt" style="margin-top:4px">0 vraie réponse rejetée sur 9 811 tâches générées</div></div>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>07 / 15</span></div>
+</section>
+
+<!-- 8. ROBUSTESSE -->
+<section class="slide">
+  <div class="tag">[ SYS.07 // CORRECTIFS INGÉNIERIE ]</div><h1>Robustesse de l'Environnement</h1>
+  <div class="body">
+    <div class="grid4" style="grid-template-columns:1fr 1fr;gap:14px">
+      <div class="soft"><div class="lbl blue">Patch 01</div><div class="ttl" style="font-size:16px;margin:4px 0">Survie de read_csv</div><div class="small">Le <code>read_csv</code> nettoyé survit à la réimportation de pandas par le code généré.</div></div>
+      <div class="soft"><div class="lbl teal">Patch 02</div><div class="ttl" style="font-size:16px;margin:4px 0">SmartFrame</div><div class="small">Résolution des fautes de frappe et des variations de noms de colonnes.</div></div>
+      <div class="soft"><div class="lbl amber">Patch 03</div><div class="ttl" style="font-size:16px;margin:4px 0">Budget temps interne</div><div class="small">Génération bornée à 29 s sur 40 s pour éviter l'échec global du lot.</div></div>
+      <div class="soft"><div class="lbl violet">Patch 04</div><div class="ttl" style="font-size:16px;margin:4px 0">Harmonisation des clés</div><div class="small">Normalisation des préfixes et zéros initiaux avant les jointures.</div></div>
+      <div class="soft" style="border-color:#93c5fd"><div class="lbl blue">Patch 05 · v10</div><div class="ttl" style="font-size:16px;margin:4px 0">Champs contenant « of » et apostrophes</div><div class="small"><code>length of stay</code> n'est plus coupé en « stay » ; <code>company's sites</code> n'ouvre plus de citation.</div></div>
+      <div class="soft" style="border-color:#93c5fd"><div class="lbl teal">Patch 06 · v10</div><div class="ttl" style="font-size:16px;margin:4px 0">Opérateurs</div><div class="small"><code>no less than 5</code> → ≥ 5 ; <code>(between 0 and 1)</code> après « fraction » n'est plus un filtre.</div></div>
+      <div class="soft" style="border-color:#93c5fd"><div class="lbl amber">Patch 07 · v10</div><div class="ttl" style="font-size:16px;margin:4px 0">Séparateurs de milliers</div><div class="small"><code>24,000</code> et <code>1 tonne = 1,000 kg</code> ne sont plus tronqués à la virgule.</div></div>
+      <div class="soft" style="border-color:#93c5fd"><div class="lbl red">Patch 08 · v10</div><div class="ttl" style="font-size:16px;margin:4px 0">Intérêts seuls</div><div class="small">« How much interest has been earned » ne renvoie plus le solde final.</div></div>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>08 / 15</span></div>
+</section>
+
+<!-- 9. DEV VS PRIVÉ -->
+<section class="slide">
+  <div class="tag">[ EVAL.01 // PROTOCOLE ]</div><h1>Dev Set vs Private Leaderboard</h1>
+  <div class="body">
+    <div class="grid3" style="gap:22px;align-items:stretch">
+      <div class="soft" style="padding:24px"><div class="lbl" style="color:var(--mute)">Diagnostic seulement</div><div class="ttl">Public dev set</div><div class="txt">180 tâches publiques utilisées pour concevoir et valider les règles déterministes.</div><div class="txt red" style="margin-top:10px;font-weight:600">100 % attendu par construction (biais de conception).</div></div>
+      <div class="soft" style="padding:24px"><div class="lbl teal">Filet de non-régression</div><div class="ttl">Tâches générées</div><div class="txt">Générateurs des 7 domaines de tables, 5 domaines de fits, 9 catégories no-file, avec les pièges du dev et une vérité calculée à part.</div><div class="txt teal" style="margin-top:10px;font-weight:600">Utile, mais ne couvre pas toutes les formulations privées.</div></div>
+      <div class="card" style="border-color:var(--blue);box-shadow:4px 4px 0 var(--blue);background:#eff6ff;padding:24px"><div class="lbl blue">Mesure officielle</div><div class="ttl blue">Private set (masqué)</div><div class="txt">120 tâches masquées évaluant la capacité réelle de généralisation de l'agent.</div><div class="txt blue" style="margin-top:10px;font-weight:600">Seule mesure valide pour le classement, et seule mesure du chemin LLM (pas de GPU).</div></div>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>09 / 15</span></div>
+</section>
+
+<!-- 10. PROTOCOLE DE TEST -->
+<section class="slide">
+  <div class="tag">[ EVAL.02 // CONTRÔLES HORS LIGNE ]</div><h1>Tester sans le modèle</h1>
+  <div class="body">
+    <div class="grid2" style="grid-template-columns:1.45fr 1fr;gap:26px;align-items:start">
+      <table class="t">
+        <tr><th>Contrôle</th><th class="r">Résultat</th></tr>
+        <tr><td>Dev, règles seules</td><td class="r">180/180</td></tr>
+        <tr><td>Dev, <code>solve()</code> complet avec LLM factice</td><td class="r">180/180 · ≤ 1.5 s/lot</td></tr>
+        <tr><td>Tables générées (types dev et nouveaux)</td><td class="r">1 548/1 550 · 0 faux</td></tr>
+        <tr><td>21 nouveaux types de tables, deux tirages</td><td class="r">420/420 ×2</td></tr>
+        <tr><td>No-files générés, trois vagues</td><td class="r">100 % · 0 faux</td></tr>
+        <tr><td>Paraphrases du dev : tables / no-files / fits</td><td class="r">765/775 · 542 · 244</td></tr>
+        <tr><td>Non-régression no-files vs v7 (6 505 tâches)</td><td class="r">0 régression</td></tr>
+        <tr><td>Contrôles de forme sur vraies réponses</td><td class="r">0 rejet / 9 811</td></tr>
+      </table>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="lbl violet">Estimation Good-Turing</div><div style="font-size:34px;font-weight:700;margin:6px 0">≈ 1/3</div><div class="small">des no-files privées viendraient de sous-gabarits absents du dev. D'où des vagues de gabarits larges plutôt que la chasse à une seule tâche.</div></div>
+        <div class="soft"><div class="lbl">Principe</div><div class="small" style="margin-top:4px">Vérité calculée sur les données propres, indépendamment de l'agent ; comparaison stricte des réponses et des prompts entre versions.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>10 / 15</span></div>
+</section>
+
+<!-- 11. PROGRESSION -->
+<section class="slide">
+  <div class="tag">[ EVAL.03 // TRAJECTOIRE ]</div><h1>Progression Private Leaderboard</h1>
+  <div class="body">
+    <div class="grid2" style="grid-template-columns:0.9fr 1.25fr;gap:30px;align-items:center">
+      <div class="card" style="text-align:center;padding:36px 20px;box-shadow:6px 6px 0 var(--ink)"><div class="lbl blue">Best submission · v10</div><div class="big" style="margin:16px 0">97.5%</div><div class="m" style="font-size:16px;color:var(--ink2)">117 / 120 TASKS PASSED</div><div class="m" style="font-size:12px;color:var(--mute);margin-top:10px">au freeze (v5) : 92.5 % · 111/120</div></div>
+      <table class="t">
+        <tr><th>Version</th><th>Évolution</th><th class="r">Score</th></tr>
+        <tr><td class="v">v1</td><td>Agent basique LLM</td><td class="r">51.7 %</td></tr>
+        <tr><td class="v">v2</td><td>Règles fit + fixes d'exécution</td><td class="r">74.2 %</td></tr>
+        <tr><td class="v">v3–v4</td><td>Règles no-file &amp; tables</td><td class="r">90.8 %</td></tr>
+        <tr><td class="v">v5 (stage3)</td><td>Optimisations déterministes</td><td class="r">92.5 %</td></tr>
+        <tr class="sep"><td colspan="3">FREEZE 2026-11-03 · versions suivantes soumises les 5–6 novembre</td></tr>
+        <tr><td class="v">v6</td><td>Règles étendues no-file &amp; fits</td><td class="r">93.3 %</td></tr>
+        <tr><td class="v">v7</td><td>+ 21 gabarits de tables, veto</td><td class="r">94.2 %</td></tr>
+        <tr><td class="v">v8</td><td>+ vagues no-file, milliers, contrôles</td><td class="r">94.2 %</td></tr>
+        <tr><td class="v">v9</td><td>+ indices du parseur, 8 échantillons</td><td class="r">95.8 %</td></tr>
+        <tr class="hl"><td class="v" style="color:var(--blue)">v10</td><td>+ règle corrigée prioritaire</td><td class="r">97.5 %</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>11 / 15</span></div>
+</section>
+
+<!-- 12. SCORES PAR FAMILLE -->
+<section class="slide">
+  <div class="tag">[ EVAL.04 // DÉTAIL PAR FAMILLE ]</div><h1>Scores v10 sur le Private Set</h1>
+  <div class="body">
+    <div class="grid3 fam" style="gap:24px">
+      <div class="card" style="text-align:center;padding:32px 20px"><div class="lbl teal">Fits (25 tasks)</div><div class="pct" style="margin:14px 0 6px">100%</div><div class="m" style="color:var(--mute)">25 / 25 RÉUSSIES</div><div class="delta green">+1 vs v5 (96.0 %)</div></div>
+      <div class="card" style="text-align:center;padding:32px 20px"><div class="lbl blue">No-files (45 tasks)</div><div class="pct" style="margin:14px 0 6px">97.8%</div><div class="m" style="color:var(--mute)">44 / 45 RÉUSSIES</div><div class="delta green">+1 vs v5 (95.6 %)</div></div>
+      <div class="card" style="text-align:center;padding:32px 20px"><div class="lbl amber">Tables (50 tasks)</div><div class="pct" style="margin:14px 0 6px">96.0%</div><div class="m" style="color:var(--mute)">48 / 50 RÉUSSIES</div><div class="delta green">+4 vs v5 (88.0 %)</div></div>
+    </div>
+    <div class="box-blue" style="margin-top:30px;font-size:15px;text-align:center">Les tables portent l'essentiel du gain (+4) : gabarits étroits et veto (+0 net), indices et 8 échantillons (+2), règles croisées (+2).</div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>12 / 15</span></div>
+</section>
+
+<!-- 13. CE QUI N'A PAS MARCHÉ -->
+<section class="slide">
+  <div class="tag">[ EVAL.05 // RÉSULTATS NÉGATIFS ]</div><h1>Ce qui n'a pas marché, et ce qu'on en tire</h1>
+  <div class="body">
+    <div class="grid2" style="grid-template-columns:1.3fr 1fr;gap:28px;align-items:start">
+      <table class="t">
+        <tr><th>Essai (sur v9 ou v10)</th><th class="r">Score</th></tr>
+        <tr><td>Vote pondéré par l'usage des colonnes du parseur</td><td class="r">95.8</td></tr>
+        <tr><td>12 échantillons, ≤ 6 tâches, second tour</td><td class="r">95.8</td></tr>
+        <tr><td>Indices pour les no-files</td><td class="r">95.8</td></tr>
+        <tr><td>Le LLM arbitre entre les deux jeux de règles</td><td class="r">96.7</td></tr>
+        <tr><td>Règles corrigées aussi là où v5 s'abstient</td><td class="r red">93.3</td></tr>
+        <tr><td>Règles corrigées partout (version antérieure)</td><td class="r red">tables 84</td></tr>
+      </table>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="soft" style="border-left:4px solid var(--blue)"><div class="lbl blue">Leçon 1</div><div class="small" style="margin-top:4px">Même score sur cinq variantes côté LLM → les erreurs restantes étaient <b>déterministes</b>.</div></div>
+        <div class="soft" style="border-left:4px solid var(--red)"><div class="lbl red">Leçon 2</div><div class="small" style="margin-top:4px">Une règle générique se trompe sur des formulations privées que le générateur ne couvre pas.</div></div>
+        <div class="soft" style="border-left:4px solid var(--violet)"><div class="lbl violet">Leçon 3</div><div class="small" style="margin-top:4px">Le LLM avec indices bat les règles génériques sur les formulations inédites.</div></div>
+        <div class="soft" style="border-left:4px solid var(--amber)"><div class="lbl amber">Leçon 4</div><div class="small" style="margin-top:4px">Bruit de 1 à 2 tâches entre soumissions : seuls v7, v9 et v10 en sortent clairement.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>13 / 15</span></div>
+</section>
+
+<!-- 14. TÂCHES MANQUÉES -->
+<section class="slide">
+  <div class="tag">[ SYS.08 // POST-MORTEM ]</div><h1>Analyse des 3 Tâches Manquées</h1>
+  <div class="body">
+    <div class="grid2" style="gap:26px">
+      <div class="box-red"><div class="lbl" style="color:#b91c1c">Répartition des échecs</div><div class="ttl" style="color:#991b1b">Private set loss (3/120)</div>
+        <ul class="b"><li><b>2 tables</b> : inchangées par toutes les variantes côté LLM</li><li><b>1 no-file</b> : stable depuis v6 malgré trois vagues de gabarits</li><li><b>0 fit</b> : famille complète</li><li>Erreurs par tâche non publiées : non inspectables</li></ul></div>
+      <div class="box-yellow"><div class="lbl" style="color:#a16207">Limites identifiées</div><div class="ttl" style="color:#854d0e">Ce qu'il faut dire honnêtement</div>
+        <ul class="b"><li><code>LAST_ERR</code> non réinitialisé entre candidats LLM (code v5)</li><li>Exception sur <code>.round()</code> appliqué aux floats natifs</li><li>v6–v10 choisies parmi ~12 soumissions sur le même privé</li><li>Soumises après le freeze du 3 novembre</li><li>Chemin LLM jamais mesuré hors ligne (pas de GPU)</li></ul></div>
+    </div>
+  </div>
+  <div class="foot"><span>DS-HARNESS</span><span>14 / 15</span></div>
+</section>
+
+<!-- 15. CLÔTURE -->
+<section class="slide dark">
+  <div class="m" style="color:#60a5fa;font-size:12.5px;font-weight:700">// 05_PERSPECTIVES_AND_CLOSE</div>
+  <h1 style="font-size:40px;color:#f8fafc;margin-top:12px">Recommandations &amp; Étape Suivante</h1>
+  <div class="grid3" style="margin-top:34px">
+    <div class="kpi"><div class="lbl" style="color:#60a5fa">01. Mesure LLM hors ligne</div><div style="font-size:16px;color:#cbd5e1;margin-top:10px;line-height:1.45">Notebook GPU avec les règles coupées (<code style="color:#e2e8f0">DSH_RULES_OFF</code>) pour comparer les réglages du LLM.</div></div>
+    <div class="kpi"><div class="lbl" style="color:#2dd4bf">02. Auditer les règles héritées</div><div style="font-size:16px;color:#cbd5e1;margin-top:10px;line-height:1.45">Croiser systématiquement deux implémentations : le désaccord révèle les erreurs silencieuses.</div></div>
+    <div class="kpi"><div class="lbl" style="color:#fbbf24">03. Le privé reste l'arbitre</div><div style="font-size:16px;color:#cbd5e1;margin-top:10px;line-height:1.45">Générateurs comme filet de non-régression ; une tâche = 0.83 point, ne pas sur-interpréter.</div></div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center">
+    <div class="grid4" style="width:100%">
+      <div style="border-left:3px solid #2563eb;padding-left:16px"><div style="font-size:34px;font-weight:700;color:#f8fafc">97.5 %</div><div class="small" style="color:#94a3b8">au private leaderboard (117/120)</div></div>
+      <div style="border-left:3px solid #0d9488;padding-left:16px"><div style="font-size:34px;font-weight:700;color:#f8fafc">+6</div><div class="small" style="color:#94a3b8">tâches gagnées depuis v5, dont +4 en tables</div></div>
+      <div style="border-left:3px solid #d97706;padding-left:16px"><div style="font-size:34px;font-weight:700;color:#f8fafc">0 faux</div><div class="small" style="color:#94a3b8">sur 1 550 tables générées (règles corrigées)</div></div>
+      <div style="border-left:3px solid #dc2626;padding-left:16px"><div style="font-size:34px;font-weight:700;color:#f8fafc">3</div><div class="small" style="color:#94a3b8">tâches privées encore manquées</div></div>
+    </div>
+  </div>
+  <div style="border-top:1px solid var(--dline);padding-top:28px;text-align:center;font-size:22px;font-weight:600;color:#f1f5f9">Merci pour votre attention — Place aux questions (10 min)</div>
+  <div class="foot"><span>github.com/Dave78300/ML_project_DS-harness</span><span>15 / 15</span></div>
+</section>
+
+</body>
+</html>
