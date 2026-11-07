@@ -77,15 +77,15 @@
 
 <!-- 1. TITRE -->
 <section class="slide dark">
-  <div><span class="pill">// ML-ARENA_CHALLENGE_194</span> <span class="m" style="color:#64748b;font-size:12.5px;margin-left:10px">SYS.ORAL_2026-11-04</span></div>
+  <div><span class="pill">// ML-ARENA_CHALLENGE_194</span> <span class="m" style="color:#64748b;font-size:12.5px;margin-left:10px">SYS.ORAL_2027-01-06</span></div>
   <h1 style="font-size:56px;line-height:1.08;margin-top:40px;color:#f8fafc;max-width:1000px">DS-Harness : Agent Rule-First avec Fallback LLM</h1>
   <p style="font-size:21px;color:#94a3b8;margin-top:24px;max-width:860px;line-height:1.45">Résolution déterministe ciblée, règles croisées &amp; génération Python supervisée sur Qwen2.5-Coder-1.5B</p>
   <div style="flex:1"></div>
   <div style="border-top:1px solid var(--dline);padding-top:26px" class="grid4">
     <div class="kpi" style="border-color:#1e3a8a;background:#0f1d3a"><div class="lbl" style="color:#60a5fa">Score private · v10</div><div class="v" style="color:#fff">97.5 % <small>(117/120)</small></div></div>
-    <div class="kpi"><div class="lbl">Au freeze · v5</div><div class="v">92.5 % <small>(111/120)</small></div></div>
-    <div class="kpi"><div class="lbl">Freeze date</div><div class="v">2026-11-03</div></div>
-    <div class="kpi"><div class="lbl">Évaluation oral</div><div class="v">2026-11-04</div></div>
+    <div class="kpi"><div class="lbl">Point de départ · v5</div><div class="v">92.5 % <small>(111/120)</small></div></div>
+    <div class="kpi"><div class="lbl">Freeze · fin de projet</div><div class="v">2027-01-04</div></div>
+    <div class="kpi"><div class="lbl">Évaluation oral</div><div class="v">2027-01-06 <small>9h–12h</small></div></div>
   </div>
   <div class="foot"><span>DS-HARNESS // agent/agent_v10.py</span><span>01 / 15</span></div>
 </section>
@@ -271,14 +271,14 @@
   <div class="tag">[ EVAL.03 // TRAJECTOIRE ]</div><h1>Progression Private Leaderboard</h1>
   <div class="body">
     <div class="grid2" style="grid-template-columns:0.9fr 1.25fr;gap:30px;align-items:center">
-      <div class="card" style="text-align:center;padding:36px 20px;box-shadow:6px 6px 0 var(--ink)"><div class="lbl blue">Best submission · v10</div><div class="big" style="margin:16px 0">97.5%</div><div class="m" style="font-size:16px;color:var(--ink2)">117 / 120 TASKS PASSED</div><div class="m" style="font-size:12px;color:var(--mute);margin-top:10px">au freeze (v5) : 92.5 % · 111/120</div></div>
+      <div class="card" style="text-align:center;padding:36px 20px;box-shadow:6px 6px 0 var(--ink)"><div class="lbl blue">Best submission · v10</div><div class="big" style="margin:16px 0">97.5%</div><div class="m" style="font-size:16px;color:var(--ink2)">117 / 120 TASKS PASSED</div><div class="m" style="font-size:12px;color:var(--mute);margin-top:10px">point de départ (v5) : 92.5 % · 111/120</div></div>
       <table class="t">
         <tr><th>Version</th><th>Évolution</th><th class="r">Score</th></tr>
         <tr><td class="v">v1</td><td>Agent basique LLM</td><td class="r">51.7 %</td></tr>
         <tr><td class="v">v2</td><td>Règles fit + fixes d'exécution</td><td class="r">74.2 %</td></tr>
         <tr><td class="v">v3–v4</td><td>Règles no-file &amp; tables</td><td class="r">90.8 %</td></tr>
         <tr><td class="v">v5 (stage3)</td><td>Optimisations déterministes</td><td class="r">92.5 %</td></tr>
-        <tr class="sep"><td colspan="3">FREEZE 2026-11-03 · versions suivantes soumises les 5–6 novembre</td></tr>
+        <tr class="sep"><td colspan="3">v6–v10 · soumises les 5–6 novembre 2026</td></tr>
         <tr><td class="v">v6</td><td>Règles étendues no-file &amp; fits</td><td class="r">93.3 %</td></tr>
         <tr><td class="v">v7</td><td>+ 21 gabarits de tables, veto</td><td class="r">94.2 %</td></tr>
         <tr><td class="v">v8</td><td>+ vagues no-file, milliers, contrôles</td><td class="r">94.2 %</td></tr>
@@ -337,7 +337,7 @@
       <div class="box-red"><div class="lbl" style="color:#b91c1c">Répartition des échecs</div><div class="ttl" style="color:#991b1b">Private set loss (3/120)</div>
         <ul class="b"><li><b>2 tables</b> : inchangées par toutes les variantes côté LLM</li><li><b>1 no-file</b> : stable depuis v6 malgré trois vagues de gabarits</li><li><b>0 fit</b> : famille complète</li><li>Erreurs par tâche non publiées : non inspectables</li></ul></div>
       <div class="box-yellow"><div class="lbl" style="color:#a16207">Limites identifiées</div><div class="ttl" style="color:#854d0e">Ce qu'il faut dire honnêtement</div>
-        <ul class="b"><li><code>LAST_ERR</code> non réinitialisé entre candidats LLM (code v5)</li><li>Exception sur <code>.round()</code> appliqué aux floats natifs</li><li>v6–v10 choisies parmi ~12 soumissions sur le même privé</li><li>Soumises après le freeze du 3 novembre</li><li>Chemin LLM jamais mesuré hors ligne (pas de GPU)</li></ul></div>
+        <ul class="b"><li><code>LAST_ERR</code> non réinitialisé entre candidats LLM (code v5)</li><li>Exception sur <code>.round()</code> appliqué aux floats natifs</li><li>v6–v10 choisies parmi ~12 soumissions sur le même privé</li><li>Gains de v6–v10 mesurés une seule fois chacun (bruit de 1 à 2 tâches)</li><li>Chemin LLM jamais mesuré hors ligne (pas de GPU)</li></ul></div>
     </div>
   </div>
   <div class="foot"><span>DS-HARNESS</span><span>14 / 15</span></div>
