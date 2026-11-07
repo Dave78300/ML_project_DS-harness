@@ -1,6 +1,7 @@
 # DS-Harness: a rule-first agent with an LLM fallback (challenge 194, ML-Arena)
 
-**Team:** _to be filled in_ · **Freeze:** 2026-11-03 23:59 · **Oral:** 2026-11-04
+**Team:** _to be filled in_ · **End of project:** Mon 2027-01-04, end of day (scores frozen, slides sent) · **Oral:**
+Wed 2027-01-06, 9:00–12:00 (one slot per team)
 
 ## TL;DR
 
@@ -9,10 +10,13 @@
   runs, repairs and votes on.
 - **Best private leaderboard result (reported):** **97.5 %** (117/120): no files 97.8 %, tables 96.0 %, fits 100 %,
   with `agent/agent_v10.py`.
-- **Progress on the private set:** 51.7 → 74.2 → 89.2 → 90.8 → 92.5 (v1 to v5, by the freeze) → 93.3 → 94.2 → 95.8 →
+- **Progress on the private set:** 51.7 → 74.2 → 89.2 → 90.8 → 92.5 (v1 to v5) → 93.3 → 94.2 → 95.8 →
   97.5 (v6 to v10, section 2.2).
-- **Dates:** v6 to v10 were submitted on 5–6 November 2026, after the freeze date above. Check with the course which
-  submission is used for grading.
+- **Dates:** the end of the project is Monday 4 January 2027, end of day: scores are frozen at the last deployment that
+  passed, and the slides (PDF) are sent the same day. The orals take place on Wednesday 6 January 2027, 9:00–12:00, one
+  slot per team. v6 to v10 (5–6 November 2026) are therefore inside the project period. **Make `agent/agent_v10.py`
+  the last deployment before the freeze:** any later deployment that passes, even an experiment, would set the frozen
+  score.
 - **How to read the numbers:** the public dev set is only a diagnostic. The deterministic rules were written from the
   dev objectives, so a perfect dev score is expected by construction. The private score is the measure that counts.
   Three private tasks are still missed (2 tables, 1 no-file); task-level private errors are not available.
@@ -30,8 +34,16 @@ number. The private evaluation contains 120 tasks:
 
 The score is the percentage of tasks answered within tolerance (`1.5 × 10⁻ⁿ` for n requested decimals). According to the
 course module, the project grade is split between the leaderboard (25 %) and the oral for both members (75 %). The
-leaderboard mark is the private-set score of the submission chosen by the team at the freeze. If the conversion is
+leaderboard mark is the private-set score frozen at the end of the project (Monday 4 January 2027, end of day), that is
+the score of the last deployment that passed. If the conversion is
 linear, one task is worth about 0.04 points of the final /20 grade (to be confirmed with the course).
+
+Key dates:
+
+| Date | Event |
+|---|---|
+| Mon 2027-01-04, end of day | End of project: scores frozen (last deployment that passed), slides (PDF) sent |
+| Wed 2027-01-06, 9:00–12:00 | Orals, one slot per team |
 
 Runtime constraints: a model of about 1.5B parameters, 40 seconds per call of 8 tasks, 15 calls, 3 CPUs, 3 GiB of RAM,
 no network. A call that raises or exceeds its time limit fails the deployment.
@@ -40,9 +52,9 @@ no network. A call that raises or exceeds its time limit fails the deployment.
 
 Version labels: **v1** first deployment, **v2** deployment with the fit rules and execution fixes (called "stage 3" in
 earlier notes), **v3** to **v5** later deployments with more deterministic rules (`stage3.py` is v5), **v6** to **v10**
-the post-freeze versions described below (`agent_v10.py` is v10).
+the versions of 5–6 November 2026 described below (`agent_v10.py` is v10).
 
-### 2.1 Private leaderboard up to the freeze (reported by the team; aggregate scores only)
+### 2.1 Private leaderboard, v1 to v5 (reported by the team; aggregate scores only)
 
 | Version | Score | No files | Tables | Fits | Tasks |
 |---|---:|---:|---:|---:|---:|
@@ -55,7 +67,7 @@ the post-freeze versions described below (`agent_v10.py` is v10).
 For reference, the challenge's own reference systems score 46.1 (Qwen2.5-1.5B), 53.3 (Qwen2.5-Coder-1.5B) and 62.2
 (Qwen3-1.7B) on the public dev set. Those are dev scores; their private scores are not known.
 
-### 2.2 Post-freeze versions (5–6 November 2026)
+### 2.2 Versions v6 to v10 (5–6 November 2026)
 
 Each version changes one thing; the private score is the only measurement of the LLM path, because no GPU was available
 to run the model offline.
@@ -233,6 +245,10 @@ Submit `agent.py` (an exact copy of `agent/agent_v10.py`) and `dsh.py` with the 
 single `class Agent` and keeps `stage3.py`'s single `exec` call in the generated-code runner; every deployment passed
 the platform's upload scan. Quota: five deployments per person per rolling 24 hours, failed ones included. Keep an
 exact copy of every submitted file, so that the version behind each score can be reproduced.
+
+Before the freeze (Monday 4 January 2027, end of day), finish with a deployment of `agent/agent_v10.py` that passes and
+check its private score (97.5 %) on the leaderboard: the frozen score is that of the last deployment that passed, so an
+experiment deployed after it would replace it. With the quota above, do not leave this to the last day.
 
 ## 8. Privacy
 
