@@ -101,9 +101,9 @@
       <div class="card"><div class="lbl red">OBJ.04</div><div class="ttl">Isolation matérielle</div><div class="txt">3 vCPUs et 3 GiB de RAM, sans GPU ni possibilité de dépassement.</div></div>
     </div>
     <div class="grid3" style="margin-top:26px">
-      <div class="soft"><span class="lbl blue">No files · 45</span><div class="small" style="margin-top:6px">Arithmétique, pourcentages, croissance, dates, probabilités, problèmes</div></div>
-      <div class="soft"><span class="lbl teal">Tables · 50</span><div class="small" style="margin-top:6px">Statistiques, filtres, classements de groupes, jointures, colonnes dérivées</div></div>
-      <div class="soft"><span class="lbl amber">Fits · 25</span><div class="small" style="margin-top:6px">Régression linéaire ou logistique sur <code>train.csv</code></div></div>
+      <div class="soft"><span class="lbl blue">No files · 45</span><div class="small" style="margin-top:6px">Arithmétique, pourcentages, croissance, dates, probabilités, problèmes</div><div class="m" style="font-size:11.5px;color:var(--ink);margin-top:8px;line-height:1.4">« A savings account starts at 5000 euros and earns 4% per year… How much interest has been earned after 4 years? »</div></div>
+      <div class="soft"><span class="lbl teal">Tables · 50</span><div class="small" style="margin-top:6px">Statistiques, filtres, classements de groupes, jointures, colonnes dérivées</div><div class="m" style="font-size:11.5px;color:var(--ink);margin-top:8px;line-height:1.4">« Compute the mean amount borrowed for each branch. What is the smallest of these values? » (CSV séparé par « ; », virgule décimale)</div></div>
+      <div class="soft"><span class="lbl amber">Fits · 25</span><div class="small" style="margin-top:6px">Régression linéaire ou logistique sur <code>train.csv</code></div><div class="m" style="font-size:11.5px;color:var(--ink);margin-top:8px;line-height:1.4">« Fit an OLS regression of the monthly rent on the living area, rooms, floor… What is the intercept? »</div></div>
     </div>
   </div>
   <div class="foot"><span>DS-HARNESS</span><span>02 / 15</span></div>
@@ -118,9 +118,16 @@
         <ul class="b" style="margin-top:12px"><li>Hallucinations fréquentes sur les calculs exacts</li><li>Erreurs de syntaxe Python sous pression</li><li>Latence élevée sur CPU, budget de 5 s par tâche</li><li>Référence du challenge : 53.3 % sur le dev</li></ul></div>
       <div style="text-align:center"><div class="lbl" style="color:var(--mute);font-size:10px">VERSUS</div><div style="font-size:26px;font-weight:700">→</div></div>
       <div class="box-green"><div><span class="badge" style="background:var(--green)">AVANTAGES</span> <b style="font-size:19px;margin-left:6px;color:#15803d">Atouts de DS-Harness</b></div>
-        <ul class="b" style="margin-top:12px"><li>Réponse exacte dès qu'un gabarit est reconnu</li><li>Exécution instantanée (&lt; 1 ms par règle)</li><li>Budget temps préservé pour les cas ouverts</li><li><b>Une règle s'abstient si elle n'est pas sûre</b></li></ul></div>
+        <ul class="b" style="margin-top:12px"><li>Réponse exacte dès qu'un gabarit est reconnu</li><li>Exécution en quelques millisecondes</li><li>Budget temps préservé pour les cas ouverts</li><li><b>Une règle s'abstient si elle n'est pas sûre</b></li></ul></div>
     </div>
     <div class="box-blue" style="margin-top:28px;text-align:center;font-size:16px"><b>Leçon de v10 :</b> une règle fausse est pire qu'une abstention. Le LLM rattrape une abstention, jamais une règle qui se trompe.</div>
+    <div style="margin-top:26px"><div class="lbl" style="color:var(--mute)">Démarche, de v1 à v10</div>
+      <div class="pipe" style="margin-top:10px">
+        <div class="step" style="min-height:70px"><div class="lbl blue">1 · Diagnostiquer</div><div class="s">Familles et formulations qui échouent</div></div><span class="arrow">›</span>
+        <div class="step" style="min-height:70px"><div class="lbl teal">2 · Une hypothèse</div><div class="s">Un seul changement par soumission</div></div><span class="arrow">›</span>
+        <div class="step" style="min-height:70px"><div class="lbl amber">3 · Vérifier hors ligne</div><div class="s">Dev, tâches générées, non-régression</div></div><span class="arrow">›</span>
+        <div class="step" style="min-height:70px"><div class="lbl red">4 · Le privé tranche</div><div class="s">On garde seulement ce qui gagne</div></div>
+      </div></div>
   </div>
   <div class="foot"><span>DS-HARNESS</span><span>03 / 15</span></div>
 </section>
@@ -271,7 +278,7 @@
   <div class="tag">[ EVAL.03 // TRAJECTOIRE ]</div><h1>Progression Private Leaderboard</h1>
   <div class="body">
     <div class="grid2" style="grid-template-columns:0.9fr 1.25fr;gap:30px;align-items:center">
-      <div class="card" style="text-align:center;padding:36px 20px;box-shadow:6px 6px 0 var(--ink)"><div class="lbl blue">Best submission · v10</div><div class="big" style="margin:16px 0">97.5%</div><div class="m" style="font-size:16px;color:var(--ink2)">117 / 120 TASKS PASSED</div><div class="m" style="font-size:12px;color:var(--mute);margin-top:10px">point de départ (v5) : 92.5 % · 111/120</div></div>
+      <div class="card" style="text-align:center;padding:36px 20px;box-shadow:6px 6px 0 var(--ink)"><div class="lbl blue">Best submission · v10</div><div class="big" style="margin:16px 0">97.5%</div><div class="m" style="font-size:16px;color:var(--ink2)">117 / 120 TASKS PASSED</div><div class="m" style="font-size:12px;color:var(--mute);margin-top:10px">point de départ (v5) : 92.5 % · 111/120<br>référence du challenge (Qwen2.5-Coder seul, dev) : 53.3 %</div></div>
       <table class="t">
         <tr><th>Version</th><th>Évolution</th><th class="r">Score</th></tr>
         <tr><td class="v">v1</td><td>Agent basique LLM</td><td class="r">51.7 %</td></tr>
@@ -299,7 +306,10 @@
       <div class="card" style="text-align:center;padding:32px 20px"><div class="lbl blue">No-files (45 tasks)</div><div class="pct" style="margin:14px 0 6px">97.8%</div><div class="m" style="color:var(--mute)">44 / 45 RÉUSSIES</div><div class="delta green">+1 vs v5 (95.6 %)</div></div>
       <div class="card" style="text-align:center;padding:32px 20px"><div class="lbl amber">Tables (50 tasks)</div><div class="pct" style="margin:14px 0 6px">96.0%</div><div class="m" style="color:var(--mute)">48 / 50 RÉUSSIES</div><div class="delta green">+4 vs v5 (88.0 %)</div></div>
     </div>
-    <div class="box-blue" style="margin-top:30px;font-size:15px;text-align:center">Les tables portent l'essentiel du gain (+4) : gabarits étroits et veto (+0 net), indices et 8 échantillons (+2), règles croisées (+2).</div>
+    <div class="card" style="margin-top:28px;border-color:var(--blue);box-shadow:4px 4px 0 var(--blue);background:#eff6ff;padding:16px 22px">
+      <div class="lbl blue">Solution retenue · <code>agent/agent_v10.py</code></div>
+      <div class="txt" style="margin-top:6px;color:#1e3a8a">Règles v5 + 21 gabarits de tables + veto + croisement (la règle corrigée gagne) ; LLM Qwen2.5-Coder avec indices du parseur, 8 échantillons et contrôles de forme. <b>97.5 % (117/120).</b></div>
+      <div class="small" style="margin-top:6px">Gain depuis v5 : +1 fit, +1 no-file, +4 tables (indices et 8 échantillons +2, règles croisées +2).</div></div>
   </div>
   <div class="foot"><span>DS-HARNESS</span><span>12 / 15</span></div>
 </section>
