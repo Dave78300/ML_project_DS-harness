@@ -50,7 +50,8 @@ no network. A call that raises or exceeds its time limit fails the deployment.
 
 ## 2. Results
 
-Ten versions were submitted, in three phases:
+The table below shows ten milestones, in three phases. Each milestone is the best of several variants tested locally or
+on the leaderboard, not the only system tried; variants that did not help are listed in section 2.2.
 
 | Phase | Versions | Approach | Private score | File |
 |---|---|---|---:|---|
@@ -61,7 +62,7 @@ Ten versions were submitted, in three phases:
 "The v5 rules" below are the rules written in phase 2 and kept unchanged in `agent_v10.py`; "the corrected rules" are
 the independent rule set written in v5b and corrected from v7 to v10.
 
-### 2.1 Private leaderboard, v1 to v5 (reported by the team; aggregate scores only)
+### 2.1 Milestones of phases 1 and 2, v1 to v5 (reported by the team; aggregate scores only)
 
 | Version | Score | No files | Tables | Fits | Tasks |
 |---|---:|---:|---:|---:|---:|
@@ -74,9 +75,9 @@ the independent rule set written in v5b and corrected from v7 to v10.
 For reference, the challenge's own reference systems score 46.1 (Qwen2.5-1.5B), 53.3 (Qwen2.5-Coder-1.5B) and 62.2
 (Qwen3-1.7B) on the public dev set. Those are dev scores; their private scores are not known.
 
-### 2.2 Versions v6 to v10 (5–6 November 2026)
+### 2.2 Milestones of phase 3, v6 to v10 (5–6 November 2026)
 
-Each version changes one thing; the private score is the only measurement of the LLM path, because no GPU was available
+Each milestone adds one main change; the private score is the only measurement of the LLM path, because no GPU was available
 to run the model offline.
 
 | Version | Change | Score | No files | Tables | Fits | Tasks |
@@ -88,7 +89,7 @@ to run the model offline.
 | v9 | + parser hints in the table prompts, 8 samples when ≤ 4 tasks reach the LLM | 95.8 | 97.8 | 92.0 | 100 | 115/120 |
 | **v10** | **+ on a disagreement between the v5 and the corrected table rules, the corrected answer wins** | **97.5** | **97.8** | **96.0** | **100** | **117/120** |
 
-Experiments that did not help (each submitted once on top of v9 or v10):
+Examples of variants that did not help (each submitted once on top of v9 or v10):
 
 | Change | Score | Reading |
 |---|---:|---|
@@ -199,7 +200,7 @@ another task's error), and `.round()` on a Python float raises (the prompt only 
 
 - **Three private tasks are still missed** (2 tables, 1 no-file). Their scores did not move with any LLM-side change, so
   they are most likely decided by rules; they cannot be inspected.
-- **Selection on the leaderboard:** v6 to v10 were chosen among about a dozen submissions on the same private set. Each
+- **Selection on the leaderboard:** the milestones were chosen among many variants tested on the same private set. Each
   change was a single, explained hypothesis, but the private score now also reflects that selection.
 - **The LLM path was never measured offline:** no GPU was available. A self-contained Kaggle notebook that compares LLM
   settings with the rules switched off (`DSH_RULES_OFF`) is the next step when a GPU is available.
