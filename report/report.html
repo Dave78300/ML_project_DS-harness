@@ -7,7 +7,7 @@
   @page { size: A4; margin: 16mm 15mm 18mm 15mm; }
   :root { --blue: #1d4ed8; --ink: #111827; --muted: #4b5563; --line: #e5e7eb; --soft: #f3f6fb; --green: #16a34a; --amber: #b45309; }
   * { box-sizing: border-box; }
-  body { font-family: "Inter", "DejaVu Sans", sans-serif; color: var(--ink); font-size: 9.5pt; line-height: 1.45; margin: 0; }
+  body { font-family: "Inter", "DejaVu Sans", sans-serif; color: var(--ink); font-size: 9.2pt; line-height: 1.38; margin: 0; }
   .head { border: 1px solid var(--line); border-left: 5px solid var(--blue); border-radius: 8px; padding: 14px 18px; background: #fbfcfe; }
   .head h1 { margin: 0; font-size: 16.5pt; color: #0f2c6b; letter-spacing: -0.2px; }
   .head .sub { color: var(--muted); margin-top: 3px; font-size: 9.6pt; }
@@ -17,7 +17,7 @@
   .kpi { flex: 1; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); text-align: center; padding: 10px 6px; }
   .kpi b { display: block; font-size: 18pt; color: #0f2c6b; }
   .kpi span { font-size: 7.6pt; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-  h2 { font-size: 12pt; color: #0f2c6b; border-bottom: 1.5px solid var(--blue); padding-bottom: 3px; margin: 14px 0 7px; break-after: avoid; }
+  h2 { font-size: 12pt; color: #0f2c6b; border-bottom: 1.5px solid var(--blue); padding-bottom: 3px; margin: 12px 0 6px; break-after: avoid; }
   p { margin: 6px 0; }
   table { width: 100%; border-collapse: collapse; margin: 8px 0 6px; font-size: 8.8pt; break-inside: avoid; }
   th { background: #eef3fb; color: #1e3a8a; text-align: left; font-weight: 600; padding: 5px 7px; }
@@ -29,7 +29,7 @@
   .box b.t { display: block; color: #14532d; margin-bottom: 2px; }
   .box.warn b.t { color: #78350f; }
   ul { break-inside: auto; margin: 6px 0 6px 18px; padding: 0; }
-  li { margin: 3px 0; break-inside: avoid; }
+  li { margin: 2px 0; break-inside: avoid; }
   code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.4pt; background: #f3f4f6; padding: 0 3px; border-radius: 3px; }
   .flow { display: flex; align-items: stretch; gap: 6px; margin: 10px 0; break-inside: avoid; }
   .step { flex: 1; border: 1px solid #c7d6f5; border-radius: 7px; background: #f6f9ff; padding: 7px 6px; text-align: center; font-size: 7.8pt; }
@@ -47,7 +47,7 @@
   <div class="sub">Technical Project Report &amp; System Architecture — ML-Arena Challenge 194 · updated 10 November 2026</div>
   <div class="chips">
     <span class="chip">End of project: 2027-01-04 (end of day)</span><span class="chip">Oral: 2027-01-06, 9:00–12:00</span>
-    <span class="chip">Private Score: 97.5 % (v10)</span><span class="chip">v1 → v10: 51.7 → 97.5 %</span>
+    <span class="chip">Private Score: 97.5 % (v10)</span><span class="chip">v1 → v10: 51.7 → 97.5 %</span><span class="chip">Team: Merge_conflict</span>
   </div>
 </div>
 
@@ -74,7 +74,7 @@ required output is a single number, evaluated within a tolerance of 1.5 × 10<su
 </table>
 <div class="box"><b class="t">System Design Strategy</b>
 Deterministic rules answer every recognised template in milliseconds; on the public dev set they answer all 180 tasks without
-calling the model. The GPU budget is therefore kept for the tasks no rule recognises, where the LLM gets parser hints and a
+calling the model. The time budget is therefore kept for the tasks no rule recognises, where the LLM gets parser hints and a
 larger vote.</div>
 
 <h2>3. Overall System Architecture</h2>
@@ -96,8 +96,8 @@ recovery, answer checks and voting.</p>
 </div>
 
 <h2>4. Deterministic Rule Engine (Rule-First Strategy)</h2>
-<p>The rules exploit the regularity of the task generator. A rule answers only when the whole question matches its template;
-otherwise it abstains and the task goes to the LLM.</p>
+<p>The rules exploit the regularity of the task generator. A rule answers when it recognises its template; otherwise it abstains
+and the task goes to the LLM. A rule can still ignore a modifier it does not know (blind audit, section 9).</p>
 <ul>
   <li><b>Fits (25/25 private):</b> target = the <code>train.csv</code> column missing from <code>test.csv</code>; features matched
   to the dictionary; year filters; unregularised linear or logistic regression; predictions, intercepts, coefficients, odds
@@ -168,7 +168,7 @@ dedicated templates.</div>
   <tr><td>v9</td><td>+ parser hints in table prompts, 8 samples</td><td class="n">97.8 %</td><td class="n">92.0 %</td><td class="n">100 %</td><td class="n">95.8 % (115/120)</td></tr>
   <tr class="best"><td>v10 (best)</td><td>+ corrected table rules win on disagreement (<code>agent_v10.py</code>)</td><td class="n">97.8 %</td><td class="n">96.0 %</td><td class="n">100 %</td><td class="n">97.5 % (117/120)</td></tr>
 </table>
-<p class="small">v6–v10 were submitted on 5–6 November 2026, within the project period: scores are frozen on 4 January 2027 (end of day) at the last deployment that passed, so v10 must be the last deployment. Each milestone adds one main change; one private
+<p class="small">v6–v10 were submitted on 5–6 November 2026. Scores are frozen on 4 January 2027 at the last deployment that passed, so v10 must be the last one. The challenge's reference (Qwen2.5-Coder alone) scores 53.3 % on dev. Each milestone adds one main change; one private
 task is worth 0.83 points, and the LLM path alone moves the score by about one task between submissions.</p>
 <table>
   <tr><th>Experiment that did not help</th><th class="n">Private Score</th><th>Reading</th></tr>
@@ -177,11 +177,12 @@ task is worth 0.83 points, and the LLM path alone moves the score by about one t
   <tr><td>Hints for no-file tasks sent to the LLM</td><td class="n">95.8 %</td><td>No effect</td></tr>
   <tr><td>LLM arbitrates between the two table rule sets</td><td class="n">96.7 %</td><td>One table recovered instead of two</td></tr>
   <tr><td>Corrected rules also where the v5 rules abstain</td><td class="n">93.3 %</td><td>Tables 86 %: generic rules misfire on private phrasings</td></tr>
+  <tr><td>Guard after v10: an unread modifier turns the rule answer into a vote</td><td class="n">97.5 %</td><td>Unchanged in every family</td></tr>
 </table>
 
 <h2>8. Testing Methodology</h2>
-<p>The dev set was used to write the rules, so it cannot measure generalisation. Changes were therefore tested on data built
-for that purpose, and the LLM path, which could not be run offline, was measured only through the private score.</p>
+<p>The dev set was used to write the rules, so it cannot measure generalisation. Changes were tested on data built for
+that purpose; the LLM path could not be run offline and was measured only through the private score.</p>
 <ul>
   <li><b>Generators with ground truth:</b> the seven table domains, the five fit domains and the nine no-file categories are
   rebuilt with dev's formatting traps (separators, decimal commas, missing-value tokens, units in cells, <code>-1</code>
@@ -198,6 +199,7 @@ for that purpose, and the LLM path, which could not be run offline, was measured
   <tr><td>Generated no-file tasks (three waves, thousands separators)</td><td>100 % on every set, 0 wrong</td></tr>
   <tr><td>Paraphrased dev objectives</td><td>Tables 765/775, no files 542/542, fits 244/244 (v5 rules: 734, 216, 240)</td></tr>
   <tr><td>Answer checks on true answers</td><td>0 rejected among 9,811 tasks</td></tr>
+  <tr><td>Blind audit after v10 (hand-written variants)</td><td>No files: 27 wrong of 112 answers; tables: about 78 % of appended modifiers ignored</td></tr>
 </table>
 <p class="small">A Good-Turing estimate on dev's no-file sub-templates suggests that about a third of the private no-file tasks
 come from sub-templates dev does not contain, which is why the template waves cover many forms.</p>
@@ -209,12 +211,14 @@ of the LLM path, so they are most likely decided by rules; task-level private er
   <li><b>Stable scores are a diagnosis.</b> Five LLM-side variants gave exactly the same family scores, which pointed to
   deterministic errors; cross-checking two rule implementations then recovered two tasks.</li>
   <li><b>Generated data is a safety net, not the arbiter.</b> Extending the corrected rules to tasks the v5 rules abstain on
-  looked better on generated data but cost five private tasks: the LLM with hints handles unseen phrasings better than
-  generic rules.</li>
-  <li><b>Leaderboard selection.</b> the milestones were chosen among many variants tested on the same private set. Each was a
-  single explained hypothesis, but the final score also reflects that selection.</li>
-  <li><b>Next step.</b> Measure the LLM path offline with the rules switched off (<code>DSH_RULES_OFF</code>) on a GPU, then
-  target the forms where the model fails.</li>
+  looked better on generated data but cost five private tasks: the LLM with hints handles unseen phrasings better.</li>
+  <li><b>The rules are not strict enough.</b> In the blind audit a rule can answer without reading a modifier (“in minutes”,
+  “of the three longest”), and both table rule sets then agree on the wrong answer. A guard that turns such an answer
+  into a vote changes no known-good answer and flags 17 of the 27 wrong audit answers, but the private score stayed at
+  97.5 % in every family: the three missed tasks lie elsewhere, or the LLM does no better on them.</li>
+  <li><b>Leaderboard selection.</b> The milestones were chosen among many variants tested on the same private set; the
+  final score also reflects that selection.</li>
+  <li><b>Next step.</b> Measure the LLM path offline on a GPU, with the rules switched off (<code>DSH_RULES_OFF</code>).</li>
 </ul>
 </body>
 </html>
