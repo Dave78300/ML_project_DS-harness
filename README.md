@@ -50,9 +50,16 @@ no network. A call that raises or exceeds its time limit fails the deployment.
 
 ## 2. Results
 
-Version labels: **v1** first deployment, **v2** deployment with the fit rules and execution fixes (called "stage 3" in
-earlier notes), **v3** to **v5** later deployments with more deterministic rules (`stage3.py` is v5), **v6** to **v10**
-the versions of 5–6 November 2026 described below (`agent_v10.py` is v10).
+Ten versions were submitted, in three phases:
+
+| Phase | Versions | Approach | Private score | File |
+|---|---|---|---:|---|
+| 1 | v1 | The LLM writes and runs the code for every task | 51.7 | |
+| 2 | v2 to v5 | Deterministic rules first, LLM as a fallback (v2: fit rules and execution fixes, called "stage 3" in earlier notes; v3: first no-file and table rules; v4: more no-file rules; v5: refined table rules) | 74.2 → 92.5 | `stage3.py` (v5) |
+| 3 | v5b, v6 to v10 (5–6 November 2026) | Wider rule coverage and cross-checked rules (v5b: independent rewrite of all rules, not kept) | 93.3 → 97.5 | `agent_v10.py` (v10) |
+
+"The v5 rules" below are the rules written in phase 2 and kept unchanged in `agent_v10.py`; "the corrected rules" are
+the independent rule set written in v5b and corrected from v7 to v10.
 
 ### 2.1 Private leaderboard, v1 to v5 (reported by the team; aggregate scores only)
 
