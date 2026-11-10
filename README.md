@@ -8,7 +8,7 @@ Wed 2027-01-06, 9:00–12:00 (one slot per team)
 - **What it is:** an agent around Qwen2.5-Coder-1.5B. The system reads and cleans the files, solves the task families
   it recognises with deterministic rules, and sends everything else to the LLM, which writes Python that the system
   runs, repairs and votes on.
-- **Best private leaderboard result (reported):** **97.5 %** (117/120): no files 97.8 %, tables 96.0 %, fits 100 %,
+- **Best private leaderboard result (reported):** **97.5 %** (117/120): no files 97.8 % (44/45), tables 96.0 % (48/50), fits 100 % (25/25),
   with `agent/agent_v10.py`.
 - **Progress on the private set:** 51.7 → 74.2 → 89.2 → 90.8 → 92.5 (v1 to v5) → 93.3 → 94.2 → 95.8 →
   97.5 (v6 to v10, section 2.2).
@@ -20,6 +20,8 @@ Wed 2027-01-06, 9:00–12:00 (one slot per team)
 - **How to read the numbers:** the public dev set is only a diagnostic. The deterministic rules were written from the
   dev objectives, so a perfect dev score is expected by construction. The private score is the measure that counts.
   Three private tasks are still missed (2 tables, 1 no-file); task-level private errors are not available.
+- **Known weakness:** the rules are not fully strict. A blind audit run after v10 found wrong answers on 24 % of the
+  no-file variants the rules answer; a guard built against this defect left the private score unchanged (section 2.4).
 
 ## 1. Challenge and grading
 
@@ -100,6 +102,7 @@ Examples of variants that did not help (each submitted once on top of v9 or v10)
 | LLM arbitrates between the two table rule sets | 96.7 | One table instead of two |
 | Corrected table rules also where the v5 rules abstain | 93.3 | Tables 86 %: generic rules misfire on private phrasings |
 | Corrected table rules first everywhere (earlier version of those rules) | tables 84.0 | Tables 42/50 in two submissions |
+| Guard after v10: a rule that did not read a modifier of the question votes, the LLM is consulted (`agent/experiments/agent_v10_guard.py`) | 97.5 | Unchanged in every family |
 
 What these results show:
 1. **Scores identical across five LLM-side variants** (hints, samples, weighting, second round, no-file hints) mean the
@@ -135,6 +138,41 @@ truth is computed on the clean data, independently of the agent. A Good-Turing e
 suggests that about one third of the private no-file tasks come from sub-templates that dev does not contain, which is
 why the template waves cover many forms instead of chasing one task.
 
+### 2.4 Blind audit after v10 and the guard experiment
+
+The generated tasks share the blind spots of the rules they were written with. After v10, a blind audit was therefore
+run on variants written without reading the rule code (`audit/`):
+
+| Audit | Result with `agent_v10.py` |
+|---|---|
+| 232 hand-written no-file variants (sibling sub-templates of dev) | 85 right, 120 left to the LLM, **27 wrong** (24 % of the 112 answers) |
+| A modifier appended to generated table questions ("for the three largest values", ", doubled"…) | The rules keep the same answer for about 78 % of the modified questions |
+
+The rules can answer without reading a modifier that changes the computation ("in minutes", "of the three longest",
+"once a 30 % tax on the interest is paid"), and the two table rule sets then agree on the wrong answer, so the v10
+cross-check cannot see it.
+
+`agent/experiments/agent_v10_guard.py` adds a guard: when a rule answers although a risk word of the question sentence
+was matched by none of its regular expressions, its answer becomes a vote (weight 2 for no-file tasks, 3 for tables) and
+the LLM is consulted. It also falls back on the second table rule set when the LLM returns nothing.
+
+| Check of the guard (no model) | Result |
+|---|---|
+| Dev (180), generated tables (3,040), known-good no-file tasks (3,538), fits (250) | 0 answer changed |
+| False alarms on correct rule answers | 1 of 126 (no-file audits), 1 of 380 (paraphrased dev tables) |
+| Wrong answers flagged, no-file audit 1 (blind) | 17 of 27 |
+| Wrong answers flagged, no-file audit 2 (80 further variants) | 19 of 29 before the word list was extended, 26 of 29 after |
+| Wrong answers flagged, modified table questions | about 70 % |
+| **Private leaderboard** | **97.5 %, identical in every family** |
+
+Reading: the defect is real, but it is not what decides the three missed private tasks, or the LLM does no better on
+them. `agent_v10.py` therefore remains the final solution; the guard is kept as a documented negative result.
+
+```bash
+python audit/run_nofile_audit.py agent/agent_v10.py                       # 27 wrong answers on audit 1
+python audit/run_nofile_audit.py agent/experiments/agent_v10_guard.py     # 17 of them flagged by the guard
+```
+
 ## 3. Architecture
 
 ```text
@@ -158,9 +196,9 @@ task ──► route ──► normalise thousands separators ──► read fil
    4. a cross-check: when the corrected rules also answer and disagree, their answer is kept;
    5. the LLM, with the v5 prompts plus parser hints (resolved columns, population and counted rows of a proportion,
       filters), 8 samples when few tasks of the batch reach it.
-4. **No files:** the v5 templates, then about 130 additional templates in three waves, each strict (a template answers
-   only when the whole question matches) and guarded (statistics of a sub-list, games with an entry fee and "interest
-   earned" questions are not answered as plain cases).
+4. **No files:** the v5 templates, then about 130 additional templates in three waves, with explicit exclusions (statistics
+   of a sub-list, games with an entry fee and "interest earned" questions are not answered as plain cases). The rules are
+   not fully strict: a blind audit after v10 showed that a rule can ignore a modifier it does not know (section 2.4).
 5. **Fits:** target = the `train.csv` column missing from `test.csv`; features matched to the dictionary; year filter;
    unregularised linear or logistic regression; prediction, intercept, R², coefficient, odds ratio, count and mean
    questions; "least squares" and "regularization" spellings.
@@ -201,6 +239,9 @@ another task's error), and `.round()` on a Python float raises (the prompt only 
 
 - **Three private tasks are still missed** (2 tables, 1 no-file). Their scores did not move with any LLM-side change, so
   they are most likely decided by rules; they cannot be inspected.
+- **The rules are not strict enough:** the blind audit (section 2.4) found 24 % wrong answers among the no-file variants the
+  rules answer, and table rules that ignore most appended modifiers. The guard built against this defect did not change
+  the private score.
 - **Selection on the leaderboard:** the milestones were chosen among many variants tested on the same private set. Each
   change was a single, explained hypothesis, but the private score now also reflects that selection.
 - **The LLM path was never measured offline:** no GPU was available. A self-contained Kaggle notebook that compares LLM
@@ -215,11 +256,14 @@ another task's error), and `.round()` on a Python float raises (the prompt only 
 |---|---|
 | `agent/agent_v10.py` | Best submission (97.5 %); submit it as `agent.py` with `dsh.py` |
 | `agent/stage3.py` | v5 (92.5 %), kept for reference; its code is also embedded in `agent_v10.py` |
+| `agent/experiments/agent_v10_guard.py` | v10 plus the guard of section 2.4 (97.5 %, same scores); negative result, not the final solution |
+| `audit/` | Blind audit sets for the no-file rules and the script that runs them without the model |
 | `tests/test_agent_v10.py` | Smoke tests of the deterministic layers of `agent_v10.py` (no model needed) |
 | `tests/test_stage3.py` | Earlier tests; they import a `ml_project_ds_harness` package that is not in the repository |
 | `dsh.py`, `localtest.py`, `scoring.py` | Challenge kit (submodule `ds-harness`): model loader, local evaluator, scoring |
 | `dev.json` | Public dev set; download locally, excluded from Git |
 | `report/` | Project report (PDF) |
+| `slides oral presentation/` | Oral slides (PDF) and their HTML source |
 | `README.md` | This report |
 
 ```bash

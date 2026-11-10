@@ -65,7 +65,7 @@
   table.t th { font-family: var(--mono); font-size: 11.5px; text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--ink); text-transform: uppercase; }
   table.t td { padding: 7px 10px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--ink2); }
   table.t td.v { font-family: var(--mono); color: var(--ink); white-space: nowrap; }
-  table.t td.r, table.t th.r { text-align: right; font-family: var(--mono); }
+  table.t td.r, table.t th.r { text-align: right; font-family: var(--mono); white-space: nowrap; }
   table.t.tight td { padding: 6px 10px; font-size: 13.5px; } table.t.tight th { padding: 6px 10px; }
   table.t.tight tr.sep td { padding: 2px 10px; font-size: 10px; }
   table.t tr.hl td { background: #eff6ff; color: var(--blue); font-weight: 600; }
@@ -145,7 +145,7 @@
         <ul class="b" style="margin-top:12px"><li>Hallucinations fréquentes sur les calculs exacts</li><li>Erreurs de syntaxe Python sous pression</li><li>Latence élevée sur CPU, budget de 5 s par tâche</li><li>Notre v1 (LLM seul) : 51.7 % au privé ; référence du challenge : 53.3 % sur le dev</li></ul></div>
       <div style="text-align:center"><div class="lbl" style="color:var(--mute);font-size:10px">VERSUS</div><div style="font-size:26px;font-weight:700">→</div></div>
       <div class="box-green"><div><span class="badge" style="background:var(--green)">AVANTAGES</span> <b style="font-size:19px;margin-left:6px;color:#15803d">Atouts de DS-Harness</b></div>
-        <ul class="b" style="margin-top:12px"><li>Réponse exacte dès qu'un gabarit est reconnu</li><li>Exécution en quelques millisecondes</li><li>Budget temps préservé pour les cas ouverts</li><li><b>Une règle s'abstient si elle n'est pas sûre</b></li></ul></div>
+        <ul class="b" style="margin-top:12px"><li>Réponse exacte dès qu'un gabarit est reconnu</li><li>Exécution en quelques millisecondes</li><li>Budget temps préservé pour les cas ouverts</li><li><b>Objectif : une règle s'abstient en cas de doute</b> (limite mesurée : slide 15)</li></ul></div>
     </div>
     <div class="box-blue" style="margin-top:28px;text-align:center;font-size:16px"><b>Leçon de la phase 3 :</b> une règle fausse est pire qu'une abstention. Le LLM rattrape une abstention, jamais une règle qui se trompe.</div>
     <div style="margin-top:26px"><div class="lbl" style="color:var(--mute)">Démarche suivie à chaque jalon</div>
@@ -166,7 +166,7 @@
     <div class="pipe">
       <div class="step"><div class="lbl blue">01. Router</div><div class="n">Acheminement</div><div class="s">No-file, Fit, Table</div></div><span class="arrow">›</span>
       <div class="step"><div class="lbl teal">02. Cleaning</div><div class="n">Nettoyage</div><div class="s">Séparateurs, milliers, sentinelles, unités</div></div><span class="arrow">›</span>
-      <div class="step hl"><div class="lbl blue">03. Rules first</div><div class="n blue">Moteur métier</div><div class="s" style="color:var(--blue)">Gabarits stricts, veto, croisement</div></div><span class="arrow">›</span>
+      <div class="step hl"><div class="lbl blue">03. Rules first</div><div class="n blue">Moteur métier</div><div class="s" style="color:var(--blue)">Gabarits, veto, croisement</div></div><span class="arrow">›</span>
       <div class="step"><div class="lbl violet">04. LLM fallback</div><div class="n">Génération</div><div class="s">Qwen2.5-Coder + indices</div></div><span class="arrow">›</span>
       <div class="step"><div class="lbl red">05. Checks</div><div class="n">Contrôle de forme</div><div class="s">Candidats LLM seulement</div></div><span class="arrow">›</span>
       <div class="step"><div class="lbl amber">06. Repair &amp; vote</div><div class="n">Validation</div><div class="s">Réparation, vote pondéré</div></div>
@@ -193,7 +193,7 @@
       <div class="card" style="border-top:5px solid var(--teal)"><div class="lbl teal">Famille 02 · 48/50 privé (v10)</div><div class="ttl">Tables (41.7 %)</div>
         <div class="txt">Jointures avec clés normalisées, filtres de dates et d'opérateurs, agrégats par groupe. 21 gabarits étroits ajoutés en v7, deux jeux de règles indépendants croisés en v10.</div></div>
       <div class="card" style="border-top:5px solid var(--amber)"><div class="lbl amber">Famille 03 · 44/45 privé (v10)</div><div class="ttl">No-files (37.5 %)</div>
-        <div class="txt">PPCM, logarithmes, systèmes linéaires, probabilités, intérêts composés, dates. Environ 130 gabarits ajoutés en phase 3, en trois vagues, chacun strict : il ne répond que si toute la question correspond.</div></div>
+        <div class="txt">PPCM, logarithmes, systèmes linéaires, probabilités, intérêts composés, dates. Environ 130 gabarits ajoutés en phase 3, en trois vagues. Un modificateur inédit dans la question peut encore être ignoré (slide 15).</div></div>
     </div>
     <div class="box-blue" style="margin-top:26px;font-size:15px">Les règles répondent seules aux 180 tâches du dev public, sans appel au LLM. Ce score est attendu par construction : le privé reste la seule mesure.</div>
   </div>
@@ -290,6 +290,7 @@
         <tr><td>Paraphrases du dev : tables / no-files / fits</td><td class="r">765/775 · 542 · 244</td></tr>
         <tr><td>Non-régression des no-files, v8 contre v7 (6 505 tâches)</td><td class="r">0 régression</td></tr>
         <tr><td>Contrôles de forme sur vraies réponses</td><td class="r">0 rejet / 9 811</td></tr>
+        <tr><td>Audit à l'aveugle après v10 : 232 variantes sans fichier</td><td class="r red">27 faux / 112 réponses</td></tr>
       </table>
       <div style="display:flex;flex-direction:column;gap:16px">
         <div class="card"><div class="lbl violet">Estimation Good-Turing</div><div style="font-size:34px;font-weight:700;margin:6px 0">≈ 1/3</div><div class="small">des no-files privées viendraient de sous-gabarits absents du dev. D'où des vagues de gabarits larges plutôt que la chasse à une seule tâche.</div></div>
@@ -344,6 +345,7 @@
         <tr><td>Le LLM arbitre entre les deux jeux de règles</td><td class="r">96.7</td></tr>
         <tr><td>Règles réécrites aussi là où les règles historiques s'abstiennent</td><td class="r red">93.3</td></tr>
         <tr><td>Règles réécrites partout, avant correction (v5b)</td><td class="r red">tables 84</td></tr>
+        <tr><td>Garde après v10 : règle suspecte réduite à un vote, LLM consulté</td><td class="r">97.5</td></tr>
       </table>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="soft" style="border-left:4px solid var(--blue)"><div class="lbl blue">Leçon 1</div><div class="small" style="margin-top:4px">Même score sur cinq variantes côté LLM → les erreurs restantes étaient <b>déterministes</b>.</div></div>
@@ -362,9 +364,9 @@
   <div class="body">
     <div class="grid2" style="gap:26px">
       <div class="box-red"><div class="lbl" style="color:#b91c1c">Répartition des échecs</div><div class="ttl" style="color:#991b1b">Private set loss (3/120)</div>
-        <ul class="b"><li><b>2 tables</b> : inchangées par toutes les variantes côté LLM</li><li><b>1 sans fichier</b> : 44/45 sans changement depuis v5b, malgré trois vagues de gabarits</li><li><b>0 fit</b> : famille complète</li><li>Erreurs par tâche non publiées : non inspectables</li></ul></div>
+        <ul class="b"><li><b>2 tables</b> : inchangées par toutes les variantes côté LLM</li><li><b>1 sans fichier</b> : 44/45 sans changement depuis v5b, malgré trois vagues de gabarits</li><li><b>0 fit</b> : famille complète</li><li>Erreurs par tâche non publiées : non inspectables</li><li>Garde testé après v10 : score et familles inchangés</li></ul></div>
       <div class="box-yellow"><div class="lbl" style="color:#a16207">Limites identifiées</div><div class="ttl" style="color:#854d0e">Ce qu'il faut dire honnêtement</div>
-        <ul class="b"><li><code>LAST_ERR</code> non réinitialisé entre candidats LLM (code de la phase 2, conservé)</li><li>Exception sur <code>.round()</code> appliqué aux floats natifs</li><li>Jalons retenus parmi de nombreuses variantes testées sur le même privé (biais de sélection)</li><li>Chaque jalon mesuré une seule fois au privé (bruit de 1 à 2 tâches)</li><li>Chemin LLM jamais mesuré hors ligne (pas de GPU)</li></ul></div>
+        <ul class="b"><li><code>LAST_ERR</code> non réinitialisé entre candidats LLM (code de la phase 2, conservé)</li><li><b>Règles pas assez strictes :</b> audit à l'aveugle, 27 réponses fausses sur 112 variantes sans fichier (24 %) ; en tables, un modificateur ajouté à la question est ignoré dans ~78 % des cas</li><li>Jalons retenus parmi de nombreuses variantes testées sur le même privé (biais de sélection)</li><li>Chaque jalon mesuré une seule fois au privé (bruit de 1 à 2 tâches)</li><li>Chemin LLM jamais mesuré hors ligne (pas de GPU)</li></ul></div>
     </div>
   </div>
   <div class="foot"><span>DS-HARNESS</span><span>15 / 16</span></div>
@@ -376,14 +378,14 @@
   <h1 style="font-size:40px;color:#f8fafc;margin-top:12px">Recommandations &amp; Étape Suivante</h1>
   <div class="grid3" style="margin-top:34px">
     <div class="kpi"><div class="lbl" style="color:#60a5fa">01. Mesure LLM hors ligne</div><div style="font-size:16px;color:#cbd5e1;margin-top:10px;line-height:1.45">Notebook GPU avec les règles coupées (<code style="color:#e2e8f0">DSH_RULES_OFF</code>) pour comparer les réglages du LLM.</div></div>
-    <div class="kpi"><div class="lbl" style="color:#2dd4bf">02. Auditer les règles héritées</div><div style="font-size:16px;color:#cbd5e1;margin-top:10px;line-height:1.45">Croiser systématiquement deux implémentations : le désaccord révèle les erreurs silencieuses.</div></div>
+    <div class="kpi"><div class="lbl" style="color:#2dd4bf">02. Auditer les règles héritées</div><div style="font-size:16px;color:#cbd5e1;margin-top:10px;line-height:1.45">Audits à l'aveugle et croisement de deux implémentations : ils révèlent les erreurs silencieuses.</div></div>
     <div class="kpi"><div class="lbl" style="color:#fbbf24">03. Le privé reste l'arbitre</div><div style="font-size:16px;color:#cbd5e1;margin-top:10px;line-height:1.45">Générateurs comme filet de non-régression ; une tâche = 0.83 point, ne pas sur-interpréter.</div></div>
   </div>
   <div style="flex:1;display:flex;align-items:center">
     <div class="grid4" style="width:100%">
       <div style="border-left:3px solid #2563eb;padding-left:16px"><div style="font-size:34px;font-weight:700;color:#f8fafc">97.5 %</div><div class="small" style="color:#94a3b8">au private leaderboard (117/120)</div></div>
       <div style="border-left:3px solid #0d9488;padding-left:16px"><div style="font-size:34px;font-weight:700;color:#f8fafc">+55</div><div class="small" style="color:#94a3b8">tâches réussies de v1 (62) à v10 (117)</div></div>
-      <div style="border-left:3px solid #d97706;padding-left:16px"><div style="font-size:34px;font-weight:700;color:#f8fafc">0 faux</div><div class="small" style="color:#94a3b8">sur 1 550 tables générées (règles réécrites)</div></div>
+      <div style="border-left:3px solid #d97706;padding-left:16px"><div style="font-size:34px;font-weight:700;color:#f8fafc">0 faux</div><div class="small" style="color:#94a3b8">sur 1 550 tables générées par nos gabarits</div></div>
       <div style="border-left:3px solid #dc2626;padding-left:16px"><div style="font-size:34px;font-weight:700;color:#f8fafc">3</div><div class="small" style="color:#94a3b8">tâches privées encore manquées</div></div>
     </div>
   </div>
