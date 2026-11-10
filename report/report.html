@@ -79,7 +79,8 @@ larger vote.</div>
 
 <h2>3. Overall System Architecture</h2>
 <p><b>Version history in brief.</b> The project is presented as ten milestones, in three phases (full table in section 7); each milestone is
-the best of several variants tested locally or on the leaderboard: <b>phase 1</b>, v1, the LLM writes the code for every task (51.7 %); <b>phase 2</b>, v2 to v5, deterministic
+the best of several variants tested locally or on the leaderboard, and milestones are numbered in the order of the design
+steps, which is not always the order in which the scores appeared on ML-Arena: <b>phase 1</b>, v1, the LLM writes the code for every task (51.7 %); <b>phase 2</b>, v2 to v5, deterministic
 rules first with the LLM as a fallback (74.2 → 92.5 %, file <code>stage3.py</code>); <b>phase 3</b>, v6 to v10 (5–6 November
 2026), wider rule coverage and cross-checked rules (93.3 → 97.5 %, file <code>agent_v10.py</code>). In this report, "the
 v5 rules" are the rules written in phase 2 and kept unchanged in the final agent; "the corrected rules" are an independent

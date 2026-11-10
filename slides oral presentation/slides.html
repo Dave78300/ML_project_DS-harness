@@ -79,17 +79,17 @@
 
 <!-- 1. TITRE -->
 <section class="slide dark">
-  <div><span class="pill">// ML-ARENA_CHALLENGE_194</span> <span class="m" style="color:#64748b;font-size:12.5px;margin-left:10px">SYS.ORAL_2027-01-06</span></div>
+  <div><span class="pill">// ML-ARENA_CHALLENGE_194</span> <span class="m" style="color:#64748b;font-size:12.5px;margin-left:10px">SYS.ORAL_2027-01-06</span> <span class="m" style="color:#e2e8f0;font-size:12.5px;font-weight:700;margin-left:10px">ÉQUIPE : Merge_conflict</span></div>
   <h1 style="font-size:56px;line-height:1.08;margin-top:40px;color:#f8fafc;max-width:1000px">DS-Harness : Agent Rule-First avec Fallback LLM</h1>
   <p style="font-size:21px;color:#94a3b8;margin-top:24px;max-width:860px;line-height:1.45">Résolution déterministe ciblée, règles croisées &amp; génération Python supervisée sur Qwen2.5-Coder-1.5B</p>
   <div style="flex:1"></div>
   <div style="border-top:1px solid var(--dline);padding-top:26px" class="grid4">
-    <div class="kpi" style="border-color:#1e3a8a;background:#0f1d3a"><div class="lbl" style="color:#60a5fa">Meilleure soumission · v10</div><div class="v" style="color:#fff">97.5 % <small>(117/120)</small></div></div>
-    <div class="kpi"><div class="lbl">Première soumission · v1</div><div class="v">51.7 % <small>(62/120)</small></div></div>
+    <div class="kpi" style="border-color:#1e3a8a;background:#0f1d3a"><div class="lbl" style="color:#60a5fa">Meilleur jalon · v10</div><div class="v" style="color:#fff">97.5 % <small>(117/120)</small></div></div>
+    <div class="kpi"><div class="lbl">Premier jalon · v1</div><div class="v">51.7 % <small>(62/120)</small></div></div>
     <div class="kpi"><div class="lbl">Freeze · fin de projet</div><div class="v">2027-01-04</div></div>
     <div class="kpi"><div class="lbl">Évaluation oral</div><div class="v">2027-01-06 <small>9h–12h</small></div></div>
   </div>
-  <div class="foot"><span>DS-HARNESS // agent/agent_v10.py</span><span>01 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS // Merge_conflict // agent/agent_v10.py</span><span>01 / 16</span></div>
 </section>
 
 <!-- 2. EXIGENCES -->
@@ -131,7 +131,7 @@
       <div style="display:grid;grid-template-columns:44px 40px 1fr;gap:6px;font-size:12.5px;line-height:1.35;margin:4px 0;color:var(--ink2)"><span class="m" style="font-weight:700;color:var(--ink)">v9</span><span class="m">95.8</span><span>+ indices du parseur dans le prompt, 8 échantillons</span></div>
       <div style="display:grid;grid-template-columns:44px 40px 1fr;gap:6px;font-size:12.5px;line-height:1.35;margin:4px 0;color:var(--ink2)"><span class="m" style="font-weight:700;color:var(--ink)">v10</span><span class="m">97.5</span><span>+ croisement des deux jeux de règles de tables</span></div></div>
   </div>
-  <div class="small" style="margin-top:10px">Chaque jalon est la meilleure variante d'une étape : bien d'autres variantes ont été testées, en local et au leaderboard (exemples slide 14).</div>
+  <div class="small" style="margin-top:10px">Chaque jalon est la meilleure variante d'une étape : bien d'autres variantes ont été testées, en local et au leaderboard (exemples slide 14). Les jalons sont numérotés dans l'ordre des étapes de conception, qui n'est pas toujours l'ordre d'apparition des scores sur ML-Arena.</div>
   <div class="small" style="margin-top:4px"><b>Vocabulaire des slides suivantes :</b> « règles historiques » = règles écrites de v2 à v5 (<code>stage3.py</code>) ; « règles réécrites » = jeu indépendant écrit en v5b, corrigé de v7 à v10.</div>
   <div class="foot"><span>DS-HARNESS</span><span>03 / 16</span></div>
 </section>
@@ -309,7 +309,7 @@
       <tr class="sep"><td colspan="7">PHASE 1 · LE LLM FAIT TOUT</td></tr>
       <tr><td class="v">v1</td><td>Agent LLM de base</td><td class="r">75.6</td><td class="r">40.0</td><td class="r">32.0</td><td class="r">62/120</td><td class="r"><b>51.7</b></td></tr><tr class="sep"><td colspan="7">PHASE 2 · RÈGLES D'ABORD, LLM EN REPLI</td></tr><tr><td class="v">v2</td><td>Règles de fit, correctifs d'exécution</td><td class="r">77.8</td><td class="r">60.0</td><td class="r">96.0</td><td class="r">89/120</td><td class="r"><b>74.2</b></td></tr><tr><td class="v">v3</td><td>Règles sans fichier et tables</td><td class="r">91.1</td><td class="r">84.0</td><td class="r">96.0</td><td class="r">107/120</td><td class="r"><b>89.2</b></td></tr><tr><td class="v">v4</td><td>Règles sans fichier étendues</td><td class="r">95.6</td><td class="r">84.0</td><td class="r">96.0</td><td class="r">109/120</td><td class="r"><b>90.8</b></td></tr><tr><td class="v">v5</td><td>Règles de tables affinées (stage3.py)</td><td class="r">95.6</td><td class="r">88.0</td><td class="r">96.0</td><td class="r">111/120</td><td class="r"><b>92.5</b></td></tr><tr class="sep"><td colspan="7">PHASE 3 · ÉLARGIR ET CONTRÔLER LES RÈGLES (5–6 NOVEMBRE 2026)</td></tr><tr style="color:#94a3b8"><td class="v" style="color:#94a3b8">v5b</td><td style="color:#94a3b8">Réécriture de toutes les règles (non retenue)</td><td class="r" style="color:#94a3b8">97.8</td><td class="r" style="color:#94a3b8">84.0</td><td class="r" style="color:#94a3b8">100</td><td class="r" style="color:#94a3b8">111/120</td><td class="r" style="color:#94a3b8"><b>92.5</b></td></tr><tr><td class="v">v6</td><td>Tables de v5, autres familles de v5b</td><td class="r">97.8</td><td class="r">86.0</td><td class="r">100</td><td class="r">112/120</td><td class="r"><b>93.3</b></td></tr><tr><td class="v">v7</td><td>+ 21 types de tables, veto</td><td class="r">97.8</td><td class="r">88.0</td><td class="r">100</td><td class="r">113/120</td><td class="r"><b>94.2</b></td></tr><tr><td class="v">v8</td><td>+ gabarits sans fichier, milliers, contrôles</td><td class="r">97.8</td><td class="r">88.0</td><td class="r">100</td><td class="r">113/120</td><td class="r"><b>94.2</b></td></tr><tr><td class="v">v9</td><td>+ indices du parseur, 8 échantillons</td><td class="r">97.8</td><td class="r">92.0</td><td class="r">100</td><td class="r">115/120</td><td class="r"><b>95.8</b></td></tr><tr class="hl"><td class="v">v10</td><td>+ croisement des règles de tables</td><td class="r">97.8</td><td class="r">96.0</td><td class="r">100</td><td class="r">117/120</td><td class="r"><b>97.5</b></td></tr>
     </table>
-    <div class="small" style="margin-top:10px">Chaque jalon retient la meilleure de plusieurs variantes testées. Scores en % sur les 120 tâches privées (45 sans fichier, 50 tables, 25 fits) ; une tâche = 0.83 point. Référence du challenge : 53.3 % sur le dev (Qwen2.5-Coder seul).</div>
+    <div class="small" style="margin-top:10px">Jalons dans l'ordre des étapes de conception ; chacun retient la meilleure de plusieurs variantes testées.<br>Scores en % sur les 120 tâches privées (45 sans fichier, 50 tables, 25 fits). Une tâche vaut 0.83 point. Référence du challenge : 53.3 % sur le dev (Qwen2.5-Coder seul).</div>
   </div>
   <div class="foot"><span>DS-HARNESS</span><span>12 / 16</span></div>
 </section>

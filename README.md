@@ -1,6 +1,6 @@
 # DS-Harness: a rule-first agent with an LLM fallback (challenge 194, ML-Arena)
 
-**Team:** _to be filled in_ · **End of project:** Mon 2027-01-04, end of day (scores frozen, slides sent) · **Oral:**
+**Team:** Merge_conflict · **End of project:** Mon 2027-01-04, end of day (scores frozen, slides sent) · **Oral:**
 Wed 2027-01-06, 9:00–12:00 (one slot per team)
 
 ## TL;DR
@@ -51,7 +51,8 @@ no network. A call that raises or exceeds its time limit fails the deployment.
 ## 2. Results
 
 The table below shows ten milestones, in three phases. Each milestone is the best of several variants tested locally or
-on the leaderboard, not the only system tried; variants that did not help are listed in section 2.2.
+on the leaderboard, not the only system tried. Milestones are numbered in the order of the design steps, which is not always the order
+in which the scores appeared on ML-Arena. Variants that did not help are listed in section 2.2.
 
 | Phase | Versions | Approach | Private score | File |
 |---|---|---|---:|---|
