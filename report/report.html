@@ -37,16 +37,17 @@
   .arrow { align-self: center; color: var(--blue); font-weight: 700; }
   .page-break { break-before: page; }
   .small { font-size: 8.6pt; color: var(--muted); }
+  tr.phase td { background:#f1f5f9; font-size:8.5pt; color:#64748b; text-transform:uppercase; letter-spacing:.03em; padding-top:3px; padding-bottom:3px; }
 </style>
 </head>
 <body>
 
 <div class="head">
   <h1>DS-Harness: A Rule-First Agent with an LLM Fallback</h1>
-  <div class="sub">Technical Project Report &amp; System Architecture — ML-Arena Challenge 194 · updated 7 November 2026</div>
+  <div class="sub">Technical Project Report &amp; System Architecture — ML-Arena Challenge 194 · updated 10 November 2026</div>
   <div class="chips">
     <span class="chip">End of project: 2027-01-04 (end of day)</span><span class="chip">Oral: 2027-01-06, 9:00–12:00</span>
-    <span class="chip">Private Score: 97.5 % (v10)</span><span class="chip">v5: 92.5 %</span>
+    <span class="chip">Private Score: 97.5 % (v10)</span><span class="chip">v1 → v10: 51.7 → 97.5 %</span>
   </div>
 </div>
 
@@ -77,6 +78,12 @@ calling the model. The GPU budget is therefore kept for the tasks no rule recogn
 larger vote.</div>
 
 <h2>3. Overall System Architecture</h2>
+<p><b>Version history in brief.</b> Ten versions were submitted to the private leaderboard, in three phases (full table in
+section 7): <b>phase 1</b>, v1, the LLM writes the code for every task (51.7 %); <b>phase 2</b>, v2 to v5, deterministic
+rules first with the LLM as a fallback (74.2 → 92.5 %, file <code>stage3.py</code>); <b>phase 3</b>, v6 to v10 (5–6 November
+2026), wider rule coverage and cross-checked rules (93.3 → 97.5 %, file <code>agent_v10.py</code>). In this report, "the
+v5 rules" are the rules written in phase 2 and kept unchanged in the final agent; "the corrected rules" are an independent
+rule set written in phase 3 (v5b) and corrected from v7 to v10.</p>
 <p>DS-Harness is a two-tier design: high-precision rule solvers first, backed by an LLM code-generation pipeline with error
 recovery, answer checks and voting.</p>
 <div class="flow">
@@ -145,12 +152,16 @@ dedicated templates.</div>
 <h2>7. Experimental Progression &amp; Leaderboard Results</h2>
 <table>
   <tr><th>Version</th><th>Key change</th><th class="n">No Files</th><th class="n">Tables</th><th class="n">Fits</th><th class="n">Private Score</th></tr>
+  <tr class="phase"><td colspan="6">Phase 1: the LLM does everything</td></tr>
   <tr><td>v1</td><td>Initial agent without rule engine</td><td class="n">75.6 %</td><td class="n">40.0 %</td><td class="n">32.0 %</td><td class="n">51.7 % (62/120)</td></tr>
+  <tr class="phase"><td colspan="6">Phase 2: rules first, LLM as a fallback</td></tr>
   <tr><td>v2</td><td>Fit rules + execution recovery fixes</td><td class="n">77.8 %</td><td class="n">60.0 %</td><td class="n">96.0 %</td><td class="n">74.2 % (89/120)</td></tr>
   <tr><td>v3</td><td>Expanded table and arithmetic rules</td><td class="n">91.1 %</td><td class="n">84.0 %</td><td class="n">96.0 %</td><td class="n">89.2 % (107/120)</td></tr>
   <tr><td>v4</td><td>Enhanced no-file rule templates</td><td class="n">95.6 %</td><td class="n">84.0 %</td><td class="n">96.0 %</td><td class="n">90.8 % (109/120)</td></tr>
   <tr><td>v5</td><td>Final rule optimisations (<code>stage3.py</code>)</td><td class="n">95.6 %</td><td class="n">88.0 %</td><td class="n">96.0 %</td><td class="n">92.5 % (111/120)</td></tr>
-  <tr><td>v6</td><td>v5 table path + reworked no-file and fit rules</td><td class="n">97.8 %</td><td class="n">86.0 %</td><td class="n">100 %</td><td class="n">93.3 % (112/120)</td></tr>
+  <tr class="phase"><td colspan="6">Phase 3: wider coverage and cross-checked rules (5–6 November 2026)</td></tr>
+  <tr style="color:#94a3b8"><td>v5b</td><td>Independent rewrite of all rules (not kept)</td><td class="n">97.8 %</td><td class="n">84.0 %</td><td class="n">100 %</td><td class="n">92.5 % (111/120)</td></tr>
+  <tr><td>v6</td><td>v5 table rules + v5b no-file and fit rules</td><td class="n">97.8 %</td><td class="n">86.0 %</td><td class="n">100 %</td><td class="n">93.3 % (112/120)</td></tr>
   <tr><td>v7</td><td>+ 21 narrow table templates and veto</td><td class="n">97.8 %</td><td class="n">88.0 %</td><td class="n">100 %</td><td class="n">94.2 % (113/120)</td></tr>
   <tr><td>v8</td><td>+ no-file template waves, thousands separators, answer checks</td><td class="n">97.8 %</td><td class="n">88.0 %</td><td class="n">100 %</td><td class="n">94.2 % (113/120)</td></tr>
   <tr><td>v9</td><td>+ parser hints in table prompts, 8 samples</td><td class="n">97.8 %</td><td class="n">92.0 %</td><td class="n">100 %</td><td class="n">95.8 % (115/120)</td></tr>
