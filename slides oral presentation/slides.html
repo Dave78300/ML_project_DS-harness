@@ -89,7 +89,7 @@
     <div class="kpi"><div class="lbl">Freeze · fin de projet</div><div class="v">2027-01-04</div></div>
     <div class="kpi"><div class="lbl">Évaluation oral</div><div class="v">2027-01-06 <small>9h–12h</small></div></div>
   </div>
-  <div class="foot"><span>DS-HARNESS // Merge_conflict // agent/agent_v10.py</span><span>01 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS // Merge_conflict // agent/agent_v10.py</span><span>01 / 15</span></div>
 </section>
 
 <!-- 2. EXIGENCES -->
@@ -108,7 +108,7 @@
       <div class="soft"><span class="lbl amber">Fits · 25</span><div class="small" style="margin-top:6px">Régression linéaire ou logistique sur <code>train.csv</code></div><div class="m" style="font-size:11.5px;color:var(--ink);margin-top:8px;line-height:1.4">« Fit an OLS regression of the monthly rent on the living area, rooms, floor… What is the intercept? »</div></div>
     </div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>02 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>02 / 15</span></div>
 </section>
 
 <!-- HISTORIQUE -->
@@ -131,9 +131,9 @@
       <div style="display:grid;grid-template-columns:44px 40px 1fr;gap:6px;font-size:12.5px;line-height:1.35;margin:4px 0;color:var(--ink2)"><span class="m" style="font-weight:700;color:var(--ink)">v9</span><span class="m">95.8</span><span>+ indices du parseur dans le prompt, 8 échantillons</span></div>
       <div style="display:grid;grid-template-columns:44px 40px 1fr;gap:6px;font-size:12.5px;line-height:1.35;margin:4px 0;color:var(--ink2)"><span class="m" style="font-weight:700;color:var(--ink)">v10</span><span class="m">97.5</span><span>+ croisement des deux jeux de règles de tables</span></div></div>
   </div>
-  <div class="small" style="margin-top:10px">Chaque jalon est la meilleure variante d'une étape : bien d'autres variantes ont été testées, en local et au leaderboard (exemples slide 14). Les jalons sont numérotés dans l'ordre des étapes de conception, qui n'est pas toujours l'ordre d'apparition des scores sur ML-Arena.</div>
+  <div class="small" style="margin-top:10px">Chaque jalon est la meilleure variante d'une étape : bien d'autres variantes ont été testées, en local et au leaderboard (exemples slide 13). Les jalons sont numérotés dans l'ordre des étapes de conception, qui n'est pas toujours l'ordre d'apparition des scores sur ML-Arena.</div>
   <div class="small" style="margin-top:4px"><b>Vocabulaire des slides suivantes :</b> « règles historiques » = règles écrites de v2 à v5 (<code>stage3.py</code>) ; « règles réécrites » = jeu indépendant écrit en v5b, corrigé de v7 à v10.</div>
-  <div class="foot"><span>DS-HARNESS</span><span>03 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>03 / 15</span></div>
 </section>
 
 <!-- 3. RULE-FIRST -->
@@ -145,7 +145,7 @@
         <ul class="b" style="margin-top:12px"><li>Hallucinations fréquentes sur les calculs exacts</li><li>Erreurs de syntaxe Python sous pression</li><li>Latence élevée sur CPU, budget de 5 s par tâche</li><li>Notre v1 (LLM seul) : 51.7 % au privé ; référence du challenge : 53.3 % sur le dev</li></ul></div>
       <div style="text-align:center"><div class="lbl" style="color:var(--mute);font-size:10px">VERSUS</div><div style="font-size:26px;font-weight:700">→</div></div>
       <div class="box-green"><div><span class="badge" style="background:var(--green)">AVANTAGES</span> <b style="font-size:19px;margin-left:6px;color:#15803d">Atouts de DS-Harness</b></div>
-        <ul class="b" style="margin-top:12px"><li>Réponse exacte dès qu'un gabarit est reconnu</li><li>Exécution en quelques millisecondes</li><li>Budget temps préservé pour les cas ouverts</li><li><b>Objectif : une règle s'abstient en cas de doute</b> (limite mesurée : slide 15)</li></ul></div>
+        <ul class="b" style="margin-top:12px"><li>Réponse exacte dès qu'un gabarit est reconnu</li><li>Exécution en quelques millisecondes</li><li>Budget temps préservé pour les cas ouverts</li><li><b>Objectif : une règle s'abstient en cas de doute</b> (limite mesurée : slide 14)</li></ul></div>
     </div>
     <div class="box-blue" style="margin-top:28px;text-align:center;font-size:16px"><b>Leçon de la phase 3 :</b> une règle fausse est pire qu'une abstention. Le LLM rattrape une abstention, jamais une règle qui se trompe.</div>
     <div style="margin-top:26px"><div class="lbl" style="color:var(--mute)">Démarche suivie à chaque jalon</div>
@@ -156,7 +156,7 @@
         <div class="step" style="min-height:70px"><div class="lbl red">4 · Le privé tranche</div><div class="s">La meilleure variante devient le jalon</div></div>
       </div></div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>04 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>04 / 15</span></div>
 </section>
 
 <!-- 4. ARCHITECTURE -->
@@ -180,7 +180,7 @@
       <div class="soft"><div class="lbl violet">5 · LLM</div><div class="small" style="margin-top:6px">Prompts de la phase 2 + indices du parseur, 8 échantillons si ≤ 4 tâches</div></div>
     </div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>05 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>05 / 15</span></div>
 </section>
 
 <!-- 5. PÉRIMÈTRE -->
@@ -193,11 +193,11 @@
       <div class="card" style="border-top:5px solid var(--teal)"><div class="lbl teal">Famille 02 · 48/50 privé (v10)</div><div class="ttl">Tables (41.7 %)</div>
         <div class="txt">Jointures avec clés normalisées, filtres de dates et d'opérateurs, agrégats par groupe. 21 gabarits étroits ajoutés en v7, deux jeux de règles indépendants croisés en v10.</div></div>
       <div class="card" style="border-top:5px solid var(--amber)"><div class="lbl amber">Famille 03 · 44/45 privé (v10)</div><div class="ttl">No-files (37.5 %)</div>
-        <div class="txt">PPCM, logarithmes, systèmes linéaires, probabilités, intérêts composés, dates. Environ 130 gabarits ajoutés en phase 3, en trois vagues. Un modificateur inédit dans la question peut encore être ignoré (slide 15).</div></div>
+        <div class="txt">PPCM, logarithmes, systèmes linéaires, probabilités, intérêts composés, dates. Environ 130 gabarits ajoutés en phase 3, en trois vagues. Un modificateur inédit dans la question peut encore être ignoré (slide 14).</div></div>
     </div>
     <div class="box-blue" style="margin-top:26px;font-size:15px">Les règles répondent seules aux 180 tâches du dev public, sans appel au LLM. Ce score est attendu par construction : le privé reste la seule mesure.</div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>06 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>06 / 15</span></div>
 </section>
 
 <!-- 6. RÈGLES CROISÉES -->
@@ -221,7 +221,7 @@
       </div>
     </div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>07 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>07 / 15</span></div>
 </section>
 
 <!-- 7. SUPERVISION LLM -->
@@ -241,7 +241,7 @@
       <div class="soft"><span class="lbl">Sécurité des contrôles</span><div class="txt" style="margin-top:4px">0 vraie réponse rejetée sur 9 811 tâches générées</div></div>
     </div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>08 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>08 / 15</span></div>
 </section>
 
 <!-- 8. ROBUSTESSE -->
@@ -259,29 +259,21 @@
       <div class="soft" style="border-color:#93c5fd"><div class="lbl red">Patch 08 · phase 3</div><div class="ttl" style="font-size:16px;margin:4px 0">Intérêts seuls</div><div class="small">« How much interest has been earned » ne renvoie plus le solde final.</div></div>
     </div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>09 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>09 / 15</span></div>
 </section>
 
 <!-- 9. DEV VS PRIVÉ -->
 <section class="slide">
-  <div class="tag">[ EVAL.01 // PROTOCOLE ]</div><h1>Dev Set vs Private Leaderboard</h1>
+  <div class="tag">[ EVAL.01 // PROTOCOLE &amp; CONTRÔLES HORS LIGNE ]</div><h1>Trois niveaux de mesure, testés sans le modèle</h1>
   <div class="body">
-    <div class="grid3" style="gap:22px;align-items:stretch">
-      <div class="soft" style="padding:24px"><div class="lbl" style="color:var(--mute)">Diagnostic seulement</div><div class="ttl">Public dev set</div><div class="txt">180 tâches publiques utilisées pour concevoir et valider les règles déterministes.</div><div class="txt red" style="margin-top:10px;font-weight:600">100 % attendu par construction (biais de conception).</div></div>
-      <div class="soft" style="padding:24px"><div class="lbl teal">Filet de non-régression</div><div class="ttl">Tâches générées</div><div class="txt">Générateurs des 7 domaines de tables, 5 domaines de fits, 9 catégories no-file, avec les pièges du dev et une vérité calculée à part.</div><div class="txt teal" style="margin-top:10px;font-weight:600">Utile, mais ne couvre pas toutes les formulations privées.</div></div>
-      <div class="card" style="border-color:var(--blue);box-shadow:4px 4px 0 var(--blue);background:#eff6ff;padding:24px"><div class="lbl blue">Mesure officielle</div><div class="ttl blue">Private set (masqué)</div><div class="txt">120 tâches masquées évaluant la capacité réelle de généralisation de l'agent.</div><div class="txt blue" style="margin-top:10px;font-weight:600">Seule mesure valide pour le classement, et seule mesure du chemin LLM (pas de GPU).</div></div>
+    <div class="grid3" style="gap:14px;margin-bottom:16px">
+      <div class="soft" style="padding:11px 14px"><div class="lbl" style="color:var(--mute)">Diagnostic seulement</div><div class="small" style="margin-top:3px"><b>Dev public, 180 tâches.</b> Sert à concevoir les règles : <span class="red" style="font-weight:600">100 % attendu par construction.</span></div></div>
+      <div class="soft" style="padding:11px 14px"><div class="lbl teal">Filet de non-régression</div><div class="small" style="margin-top:3px"><b>Tâches générées.</b> 7 domaines de tables, 5 de fits, 9 catégories no-file, <span class="teal" style="font-weight:600">vérité calculée à part.</span></div></div>
+      <div class="soft" style="padding:11px 14px;border-color:var(--blue);background:#eff6ff"><div class="lbl blue">Mesure officielle</div><div class="small" style="margin-top:3px"><b>Privé masqué, 120 tâches.</b> <span class="blue" style="font-weight:600">Seule mesure du classement et du chemin LLM (pas de GPU).</span></div></div>
     </div>
-  </div>
-  <div class="foot"><span>DS-HARNESS</span><span>10 / 16</span></div>
-</section>
-
-<!-- 10. PROTOCOLE DE TEST -->
-<section class="slide">
-  <div class="tag">[ EVAL.02 // CONTRÔLES HORS LIGNE ]</div><h1>Tester sans le modèle</h1>
-  <div class="body">
     <div class="grid2" style="grid-template-columns:1.45fr 1fr;gap:26px;align-items:start">
-      <table class="t">
-        <tr><th>Contrôle</th><th class="r">Résultat</th></tr>
+      <table class="t tight">
+        <tr><th>Contrôle hors ligne</th><th class="r">Résultat</th></tr>
         <tr><td>Dev, règles seules</td><td class="r">180/180</td></tr>
         <tr><td>Dev, <code>solve()</code> complet avec LLM factice</td><td class="r">180/180 · ≤ 1.5 s/lot</td></tr>
         <tr><td>Tables générées (types dev et nouveaux)</td><td class="r">1 548/1 550 · 0 faux</td></tr>
@@ -292,18 +284,18 @@
         <tr><td>Contrôles de forme sur vraies réponses</td><td class="r">0 rejet / 9 811</td></tr>
         <tr><td>Audit à l'aveugle après v10 : 232 variantes sans fichier</td><td class="r red">27 faux / 112 réponses</td></tr>
       </table>
-      <div style="display:flex;flex-direction:column;gap:16px">
-        <div class="card"><div class="lbl violet">Estimation Good-Turing</div><div style="font-size:34px;font-weight:700;margin:6px 0">≈ 1/3</div><div class="small">des no-files privées viendraient de sous-gabarits absents du dev. D'où des vagues de gabarits larges plutôt que la chasse à une seule tâche.</div></div>
-        <div class="soft"><div class="lbl">Principe</div><div class="small" style="margin-top:4px">Vérité calculée sur les données propres, indépendamment de l'agent ; comparaison stricte des réponses et des prompts entre versions.</div></div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card"><div class="lbl violet">Estimation Good-Turing</div><div style="font-size:32px;font-weight:700;margin:4px 0">≈ 1/3</div><div class="small">des no-files privées viendraient de sous-gabarits absents du dev. D'où des vagues de gabarits larges plutôt que la chasse à une seule tâche.</div></div>
+        <div class="soft"><div class="lbl">Principe</div><div class="small" style="margin-top:4px">Vérité calculée indépendamment de l'agent ; comparaison stricte des réponses et des prompts entre versions. Les générateurs ne couvrent pas toutes les formulations privées.</div></div>
       </div>
     </div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>11 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>10 / 15</span></div>
 </section>
 
 <!-- 11. PROGRESSION -->
 <section class="slide">
-  <div class="tag">[ EVAL.03 // TRAJECTOIRE ]</div><h1>Score privé de chaque jalon</h1>
+  <div class="tag">[ EVAL.02 // TRAJECTOIRE ]</div><h1>Score privé de chaque jalon</h1>
   <div style="margin-top:16px">
     <table class="t tight">
       <tr><th>Jalon</th><th>Ce qui change</th><th class="r">Sans fichier</th><th class="r">Tables</th><th class="r">Fits</th><th class="r">Tâches</th><th class="r">Score</th></tr>
@@ -312,12 +304,12 @@
     </table>
     <div class="small" style="margin-top:10px">Jalons dans l'ordre des étapes de conception ; chacun retient la meilleure de plusieurs variantes testées.<br>Scores en % sur les 120 tâches privées (45 sans fichier, 50 tables, 25 fits). Une tâche vaut 0.83 point. Référence du challenge : 53.3 % sur le dev (Qwen2.5-Coder seul).</div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>12 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>11 / 15</span></div>
 </section>
 
 <!-- 12. SCORES PAR FAMILLE -->
 <section class="slide">
-  <div class="tag">[ EVAL.04 // DÉTAIL PAR FAMILLE ]</div><h1>Scores v10 sur le Private Set</h1>
+  <div class="tag">[ EVAL.03 // DÉTAIL PAR FAMILLE ]</div><h1>Scores v10 sur le Private Set</h1>
   <div class="body">
     <div class="grid3 fam" style="gap:24px">
       <div class="card" style="text-align:center;padding:32px 20px"><div class="lbl teal">Fits (25 tasks)</div><div class="pct" style="margin:14px 0 6px">100%</div><div class="m" style="color:var(--mute)">25 / 25 RÉUSSIES</div><div class="delta">v1 32.0 % → v5 96.0 % → <b class="green">v10 100 %</b></div></div>
@@ -329,12 +321,12 @@
       <div class="txt" style="margin-top:6px;color:#1e3a8a">Règles historiques (v2–v5) + 21 gabarits de tables + veto + croisement avec les règles réécrites ; LLM Qwen2.5-Coder avec indices du parseur, 8 échantillons et contrôles de forme. <b>97.5 % (117/120).</b></div>
       <div class="small" style="margin-top:6px">Depuis v1 : +55 tâches. Sur la phase 3 (v5 → v10) : +1 fit, +1 sans fichier, +4 tables (indices et 8 échantillons +2, croisement +2).</div></div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>13 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>12 / 15</span></div>
 </section>
 
 <!-- 13. CE QUI N'A PAS MARCHÉ -->
 <section class="slide">
-  <div class="tag">[ EVAL.05 // RÉSULTATS NÉGATIFS ]</div><h1>Ce qui n'a pas marché, et ce qu'on en tire</h1>
+  <div class="tag">[ EVAL.04 // RÉSULTATS NÉGATIFS ]</div><h1>Ce qui n'a pas marché, et ce qu'on en tire</h1>
   <div class="body">
     <div class="grid2" style="grid-template-columns:1.3fr 1fr;gap:28px;align-items:start">
       <table class="t">
@@ -355,7 +347,7 @@
       </div>
     </div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>14 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>13 / 15</span></div>
 </section>
 
 <!-- 14. TÂCHES MANQUÉES -->
@@ -369,7 +361,7 @@
         <ul class="b"><li><code>LAST_ERR</code> non réinitialisé entre candidats LLM (code de la phase 2, conservé)</li><li><b>Règles pas assez strictes :</b> audit à l'aveugle, 27 réponses fausses sur 112 variantes sans fichier (24 %) ; en tables, un modificateur ajouté à la question est ignoré dans ~78 % des cas</li><li>Jalons retenus parmi de nombreuses variantes testées sur le même privé (biais de sélection)</li><li>Chaque jalon mesuré une seule fois au privé (bruit de 1 à 2 tâches)</li><li>Chemin LLM jamais mesuré hors ligne (pas de GPU)</li></ul></div>
     </div>
   </div>
-  <div class="foot"><span>DS-HARNESS</span><span>15 / 16</span></div>
+  <div class="foot"><span>DS-HARNESS</span><span>14 / 15</span></div>
 </section>
 
 <!-- 15. CLÔTURE -->
@@ -390,7 +382,7 @@
     </div>
   </div>
   <div style="border-top:1px solid var(--dline);padding-top:28px;text-align:center;font-size:22px;font-weight:600;color:#f1f5f9">Merci pour votre attention — Place aux questions (10 min)</div>
-  <div class="foot"><span>github.com/Dave78300/ML_project_DS-harness</span><span>16 / 16</span></div>
+  <div class="foot"><span>github.com/Dave78300/ML_project_DS-harness</span><span>15 / 15</span></div>
 </section>
 
 </body>
